@@ -19,6 +19,10 @@ Thumbs.db
 # Logs (keep results/ but ignore temp logs)
 *.log.tmp
 
+# Local-only folders (not public)
+docs/
+results/
+
 # Office temp files
 ~$*
 
