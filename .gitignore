@@ -1,0 +1,27 @@
+# Build output
+target/
+dependency-reduced-pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+.bmad-core/
+
+# Logs (keep results/ but ignore temp logs)
+*.log.tmp
+
+# Office temp files
+~$*
+
+# Misc
+2026-02-10-hello.txt
+web-bundles/

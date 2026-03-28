@@ -1,0 +1,37 @@
+# SDE_Spark Configuration File
+# Usage: --config /path/to/sde-spark.properties
+# CLI args override values from this file.
+
+# Kafka topics
+data.topic=data_topic
+request.topic=request_topic
+output.topic=estimation_topic
+
+# Kafka connection
+kafka.brokers=localhost:9092
+kafka.group.id=sde-spark
+starting.offsets=earliest
+
+# Processing
+trigger.interval=1 second
+checkpoint.location=hdfs:///sde/checkpoints
+
+# State timeouts
+safety.net.ttl=P7D
+routing.state.ttl=P1D
+aggregation.timeout=PT5M
+
+# Data loss handling (set to true in production to fail fast on offset gaps)
+fail.on.data.loss=false
+
+# Producer tuning
+kafka.producer.acks=all
+kafka.producer.compression=lz4
+kafka.producer.idempotence=true
+
+# Kafka security (uncomment for SSL/SASL)
+#kafka.security.protocol=SASL_SSL
+#kafka.sasl.mechanism=PLAIN
+#kafka.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="user" password="pass";
+#kafka.ssl.truststore.location=/path/to/truststore.jks
+#kafka.ssl.truststore.password=changeit

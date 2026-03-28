@@ -1,0 +1,149 @@
+%% SDE Spark Brownfield Architecture - Complete System Diagram
+%% Render at: https://mermaid.live or in GitHub/GitLab/VS Code
+%% Generated from brownfield architecture document
+
+graph TD
+    %% ═══════════════════════════════════════════
+    %% EXTERNAL: Kafka Topics
+    %% ═══════════════════════════════════════════
+    KD[("fa:fa-database Kafka<br/>data_topic")]
+    KR[("fa:fa-database Kafka<br/>request_topic")]
+    KO[("fa:fa-database Kafka<br/>estimation_topic")]
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 1: INGESTION & PARSING
+    %% ═══════════════════════════════════════════
+    subgraph L1["LAYER 1: Ingestion & Parsing"]
+        ReadData["readStream.format(kafka)<br/>data_topic<br/>selectExpr(CAST value AS STRING)"]
+        ReadRQ["readStream.format(kafka)<br/>request_topic<br/>selectExpr(CAST value AS STRING)"]
+        ParseDP["map<br/>(parse JSON)<br/>→ Datapoint<br/>Jackson ObjectMapper<br/>@JsonProperty mapping"]
+        ParseRQ["map<br/>(parse JSON)<br/>→ Request<br/>Jackson ObjectMapper<br/>Validate synopsisID ∈ {1,2,3,4}"]
+    end
+
+    KD -->|"JSON String"| ReadData
+    KR -->|"JSON String"| ReadRQ
+    ReadData --> ParseDP
+    ReadRQ --> ParseRQ
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 2: ROUTING & REGISTRATION
+    %% ═══════════════════════════════════════════
+    subgraph L2["LAYER 2: Routing & Registration"]
+        RR["RequestRouter<br/>━━━━━━━━━━━━━━━━<br/>flatMapGroupsWithState<br/>━━━━━━━━━━━━━━━━<br/>1 Request → N copies<br/>key_0, key_1, ... key_N-1<br/>━━━━━━━━━━━━━━━━<br/>State: RegistrationState"]
+        DR["DataRouter<br/>━━━━━━━━━━━━━━━━<br/>flatMapGroupsWithState<br/>━━━━━━━━━━━━━━━━<br/>Route Datapoint to all<br/>registered synopses<br/>━━━━━━━━━━━━━━━━<br/>State: DataRoutingState"]
+    end
+
+    ParseRQ --> RR
+    ParseDP --> DR
+    ParseRQ -.->|"Registration updates"| DR
+
+    %% ═══════════════════════════════════════════
+    %% UNION: Dual-Input Merge
+    %% ═══════════════════════════════════════════
+    TagDP["Tag as InputEvent.DATA"]
+    TagRQ["Tag as InputEvent.REQUEST"]
+    UNION(["Union<br/>Dataset&lt;InputEvent&gt;"])
+
+    DR --> TagDP
+    RR --> TagRQ
+    TagDP --> UNION
+    TagRQ --> UNION
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 3: CORE SYNOPSIS PROCESSING
+    %% ═══════════════════════════════════════════
+    subgraph L3["LAYER 3: Core Synopsis Processing ⭐"]
+        SP["SynopsisProcessor<br/>━━━━━━━━━━━━━━━━━━━━━━━<br/>flatMapGroupsWithState<br/>GroupState&lt;SynopsisProcessorState&gt;<br/>━━━━━━━━━━━━━━━━━━━━━━━<br/>IF DataInput → iterate synopses, call add()<br/>IF Request(ADD) → SynopsisFactory.create()<br/>IF Request(ESTIMATE) → call estimate()<br/>IF Request(DELETE) → remove synopsis<br/>━━━━━━━━━━━━━━━━━━━━━━━<br/>Backend: RocksDB + HDFS Checkpoint"]
+        SF["SynopsisFactory<br/>━━━━━━━━━━━━━━━━<br/>1 → CountMin<br/>2 → Bloomfilter<br/>3 → AMSsynopsis<br/>4 → HyperLogLog"]
+    end
+
+    UNION -->|"groupByKey(partitionKey)"| SP
+    SF -.->|"creates"| SP
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 4: PATH SPLITTING
+    %% ═══════════════════════════════════════════
+    subgraph L4["LAYER 4: Path Splitting"]
+        PS{"PathSplitter<br/>━━━━━━━━━━━━━<br/>filter(noOfP)"}
+    end
+
+    SP -->|"Iterator&lt;Estimation&gt;"| PS
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 5: AGGREGATION
+    %% ═══════════════════════════════════════════
+    subgraph L5["LAYER 5: Aggregation"]
+        direction TB
+        GREEN["GREEN PATH<br/>━━━━━━━━━━━━━━━━<br/>noOfP == 1<br/>Direct passthrough<br/>No merging needed"]
+        PURPLE["PURPLE PATH<br/>━━━━━━━━━━━━━━━━━━━━<br/>noOfP > 1<br/>━━━━━━━━━━━━━━━━━━━━<br/>ReduceAggregator<br/>flatMapGroupsWithState<br/>groupBy(uid)<br/>━━━━━━━━━━━━━━━━━━━━<br/>Collect N partials → merge<br/>CountMin: SimpleSumFunction<br/>Bloom: SimpleORFunction<br/>AMS: SimpleSumFunction<br/>HLL: SimpleSumFunction"]
+        YELLOW["YELLOW PATH<br/>━━━━━━━━━━━━━━━━<br/>geo-dispersed<br/>(DEFERRED v1.0)<br/>━━━━━━━━━━━━━━━━<br/>Cross-region merge<br/>via union_topic"]
+    end
+
+    PS -->|"noOfP == 1"| GREEN
+    PS -->|"noOfP > 1"| PURPLE
+    PS -.->|"geo (future)"| YELLOW
+
+    %% ═══════════════════════════════════════════
+    %% LAYER 6: OUTPUT
+    %% ═══════════════════════════════════════════
+    subgraph L6["LAYER 6: Output"]
+        KOL["KafkaOutputLayer<br/>━━━━━━━━━━━━━━━━<br/>writeStream.format(kafka)<br/>Estimation → JSON<br/>Trigger: ProcessingTime"]
+    end
+
+    GREEN --> KOL
+    PURPLE --> KOL
+    KOL --> KO
+
+    %% ═══════════════════════════════════════════
+    %% INFRASTRUCTURE: State & Checkpointing
+    %% ═══════════════════════════════════════════
+    subgraph INFRA["Infrastructure"]
+        ROCKS[("RocksDB<br/>Local SSD<br/>State Backend")]
+        HDFS[("HDFS / S3<br/>Checkpoint<br/>Storage")]
+    end
+
+    SP -.->|"state read/write"| ROCKS
+    ROCKS -.->|"checkpoint"| HDFS
+    PURPLE -.->|"state"| ROCKS
+
+    %% ═══════════════════════════════════════════
+    %% MODULE STRUCTURE
+    %% ═══════════════════════════════════════════
+    subgraph MODULES["Maven Multi-Module"]
+        direction LR
+        MC["sde-common<br/>Messages, Synopsis,<br/>ReduceFunctions"]
+        MF["sde-flink<br/>(existing, untouched)"]
+        MS["sde-spark<br/>(new implementation)"]
+    end
+
+    MC -.->|"dependency"| MF
+    MC -.->|"dependency"| MS
+
+    %% ═══════════════════════════════════════════
+    %% STYLING
+    %% ═══════════════════════════════════════════
+    classDef kafka fill:#1a73e8,stroke:#0d47a1,stroke-width:2px,color:#fff,font-weight:bold
+    classDef ingestion fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef routing fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef core fill:#ff6f00,stroke:#bf360c,stroke-width:3px,color:#fff,font-weight:bold
+    classDef factory fill:#ffcc80,stroke:#e65100,stroke-width:2px
+    classDef split fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef green fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef purple fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
+    classDef yellow fill:#fff9c4,stroke:#f9a825,stroke-width:2px,stroke-dasharray: 5 5
+    classDef output fill:#bbdefb,stroke:#1565c0,stroke-width:2px
+    classDef infra fill:#eceff1,stroke:#546e7a,stroke-width:2px
+    classDef module fill:#fce4ec,stroke:#c62828,stroke-width:1px
+
+    class KD,KR,KO kafka
+    class ReadData,ReadRQ,ParseDP,ParseRQ ingestion
+    class RR,DR routing
+    class SP core
+    class SF factory
+    class PS split
+    class GREEN green
+    class PURPLE purple
+    class YELLOW yellow
+    class KOL output
+    class ROCKS,HDFS infra
+    class MC,MF,MS module
