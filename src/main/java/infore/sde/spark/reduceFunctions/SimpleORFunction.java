@@ -5,6 +5,11 @@ import infore.sde.spark.messages.Estimation;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * ORs partial boolean estimations from parallel synopsis instances.
+ * Used for BloomFilter (2) aggregation on the PURPLE path:
+ * if any partition reports "present", the final result is true.
+ */
 public class SimpleORFunction extends ReduceFunction {
 
     private static final long serialVersionUID = 1L;

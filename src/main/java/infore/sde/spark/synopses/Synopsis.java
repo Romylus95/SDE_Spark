@@ -6,14 +6,29 @@ import infore.sde.spark.messages.Request;
 
 import java.io.Serializable;
 
+/**
+ * Abstract base class for all synopsis (probabilistic data structure) implementations.
+ *
+ * Each synopsis instance is identified by a unique uid (synopsisID field) and configured
+ * with a keyIndex (which JSON field to use as the key), valueIndex (which field to aggregate),
+ * and operationMode (e.g., "Queryable").
+ *
+ * Subclasses must implement:
+ *   - add(values): ingest a data point from the stream
+ *   - estimate(key/request): query the synopsis for an estimation
+ *   - merge(other): combine with another synopsis (for PURPLE path aggregation)
+ *   - snapshotState(): serialize transient internal state for checkpointing (if needed)
+ *
+ * Supported implementations: CountMin (1), Bloomfilter (2), AMSsynopsis (3), HyperLogLogSynopsis (4)
+ */
 public abstract class Synopsis implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    protected int synopsisID;
-    protected String keyIndex;
-    protected String valueIndex;
-    protected String operationMode;
+    protected int synopsisID;    // unique instance identifier (uid from the ADD request)
+    protected String keyIndex;   // JSON field name used as the key (e.g., "StockID")
+    protected String valueIndex; // JSON field name used as the value (e.g., "price")
+    protected String operationMode; // operation mode (e.g., "Queryable")
 
     protected Synopsis(int uid, String keyIndex, String valueIndex) {
         this.synopsisID = uid;

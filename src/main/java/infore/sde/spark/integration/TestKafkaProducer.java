@@ -13,12 +13,12 @@ import java.util.Properties;
  * Test Kafka producer for Layer 1+2 validation.
  *
  * Sends sample data events and request commands to Kafka topics,
- * matching the exact JSON wire format of the Flink SDE.
+ * using the standard SDE JSON wire format. Exercises the full
+ * request lifecycle: ADD -> DATA -> ESTIMATE -> DELETE.
  *
  * Usage:
- *   java -cp sde-spark-1.0.0-SNAPSHOT.jar \
- *     infore.sde.spark.integration.TestKafkaProducer \
- *     localhost:9092
+ *   mvn exec:java -Plocal -Dexec.mainClass="infore.sde.spark.integration.TestKafkaProducer" \
+ *     -Dexec.args="localhost:9092"
  */
 public class TestKafkaProducer {
 

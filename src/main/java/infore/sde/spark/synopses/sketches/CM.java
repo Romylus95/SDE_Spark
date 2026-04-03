@@ -15,10 +15,20 @@ import com.clearspring.analytics.util.Preconditions;
 
 /**
  * Count-Min Sketch data structure.
- * An Improved Data Stream Summary: The Count-Min Sketch and its Applications
+ * A probabilistic frequency estimation structure using sub-linear space.
+ *
+ * Reference: Cormode & Muthukrishnan, "An Improved Data Stream Summary:
+ * The Count-Min Sketch and its Applications" (2005).
  * https://web.archive.org/web/20060907232042/http://www.eecs.harvard.edu/~michaelm/CS222/countmin.pdf
  *
- * Ported from infore.SDE.synopses.Sketches.CM (Flink project).
+ * Supports:
+ *   - add(item, count): increment frequency for an item
+ *   - estimateCount(item): query estimated frequency (may overestimate, never underestimates)
+ *   - merge(other): combine two sketches with identical parameters
+ *   - serialize/deserialize: binary format for checkpointing
+ *
+ * Parameterized by epsilon (relative error) and confidence (1 - delta).
+ * Width = ceil(2/epsilon), Depth = ceil(-ln(1-confidence) / ln(2)).
  */
 public class CM implements Serializable {
 

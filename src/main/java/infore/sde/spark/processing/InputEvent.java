@@ -6,9 +6,15 @@ import infore.sde.spark.messages.Request;
 import java.io.Serializable;
 
 /**
- * Union discriminator type. Tags a message as either DATA or REQUEST
- * so that both streams can be merged into a single Dataset and dispatched
- * inside flatMapGroupsWithState.
+ * Union discriminator type — the key design pattern in SDE_Spark.
+ *
+ * Spark Structured Streaming does not support two-input streams natively.
+ * InputEvent wraps either a Datapoint (DATA) or a Request (REQUEST) so that
+ * both streams can be merged into a single Dataset<InputEvent> via union(),
+ * then dispatched inside flatMapGroupsWithState based on the type field.
+ *
+ * Each InputEvent carries a dataSetKey extracted from the wrapped message,
+ * used as the groupByKey partition key for routing and processing.
  */
 public class InputEvent implements Serializable {
 

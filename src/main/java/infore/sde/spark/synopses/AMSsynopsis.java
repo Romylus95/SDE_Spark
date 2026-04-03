@@ -12,6 +12,16 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 
+/**
+ * AMS Sketch synopsis — frequency moment estimation.
+ * Estimates the second frequency moment (F2) of a data stream, which measures
+ * the "skewness" of the distribution. Uses the streaminer AMSSketch implementation.
+ *
+ * The AMSSketch object is transient (not directly serializable by Kryo).
+ * State is preserved via reflection-based snapshot/restore: internal fields
+ * (count, counts, test) are extracted before each checkpoint and restored on access.
+ * Reflection is required because AMSSketch does not expose its internal state.
+ */
 public class AMSsynopsis extends Synopsis {
 
     private static final long serialVersionUID = 1L;

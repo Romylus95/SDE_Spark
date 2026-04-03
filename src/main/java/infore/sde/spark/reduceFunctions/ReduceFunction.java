@@ -4,6 +4,13 @@ import infore.sde.spark.messages.Estimation;
 
 import java.io.Serializable;
 
+/**
+ * Abstract base for PURPLE path aggregation functions.
+ * Collects partial estimation results from N parallel synopsis partitions
+ * and produces a single merged result when all noOfP partials have arrived.
+ *
+ * Implementations: SimpleSumFunction (numeric sum), SimpleORFunction (boolean OR).
+ */
 public abstract class ReduceFunction implements Serializable {
 
     private static final long serialVersionUID = 1L;

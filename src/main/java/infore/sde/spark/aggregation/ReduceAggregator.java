@@ -15,15 +15,19 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Layer 5 — Aggregation.
- * Collects partial results from multiple partitions (Purple path)
+ * Layer 5 — Aggregation (PURPLE path only).
+ * Collects partial estimation results from multiple parallel synopsis partitions
  * and merges them into a single final estimation.
  *
- * Grouped by uid so all partials for the same synopsis land here.
+ * Grouped by uid so all partials for the same synopsis instance land here.
  * Uses flatMapGroupsWithState to buffer partials until count == noOfP.
  *
- * Replaces: ReduceFlatMap + GReduceFlatMap from Flink
- * Key improvement: eliminates GReduceFlatMap.setParallelism(1) bottleneck.
+ * Reduce strategy per synopsis type:
+ *   - CountMin (1), AMS (3), HyperLogLog (4) -> SimpleSumFunction (sum partial estimates)
+ *   - BloomFilter (2) -> SimpleORFunction (OR partial membership results)
+ *
+ * Supports processing-time timeout to discard incomplete aggregations
+ * if not all partials arrive within the configured timeout window.
  */
 public class ReduceAggregator
         implements FlatMapGroupsWithStateFunction<Integer, Estimation, AggregationState, Estimation> {

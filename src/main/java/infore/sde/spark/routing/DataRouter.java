@@ -15,21 +15,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Layer 2 — Combined request + data routing with state.
+ * Layer 2 — Unified request + data routing with stateful fan-out.
  *
- * Receives the ORIGINAL (un-routed) request stream unioned with data.
- * For requests with noOfP > 1:
- *   - Registers parallelism in routing state (so future data gets fanned out)
- *   - Fans out the request itself to keyed partition keys (like RequestRouter)
- * For data:
- *   - Routes to all registered keyed partition keys
+ * Receives the union of request and data streams (tagged as InputEvent).
+ * Manages routing state per dataset key using flatMapGroupsWithState.
+ *
+ * For requests with noOfP > 1 (PURPLE path):
+ *   - Registers parallelism level in routing state (so future data gets fanned out)
+ *   - Fans out the request itself to N keyed partition keys: "{key}_{noOfP}_KEYED_{i}"
+ * For requests with noOfP == 1 (GREEN path):
+ *   - Forwards request as-is (no fan-out needed)
+ * For data events:
+ *   - Routes to all registered keyed partition keys (hash-based slot assignment)
  *   - Also forwards with original key for noOfP=1 synopses
  *
- * This replaces the separate RequestRouter + DataRouter architecture.
- * The key insight: request fan-out and data fan-out must share the same
- * groupByKey partition so the routing state is visible to both.
+ * Events within each micro-batch are sorted: ADD/DELETE first, then DATA, then ESTIMATE.
+ * This ensures routing registrations are applied before data arrives, since
+ * micro-batch event ordering is not guaranteed by Spark.
  *
- * Replaces: dataRouterCoFlatMap.java from Flink
+ * Supports processing-time timeout to evict stale routing state for inactive keys.
  */
 public class DataRouter
         implements FlatMapGroupsWithStateFunction<String, InputEvent, RoutingState, InputEvent> {

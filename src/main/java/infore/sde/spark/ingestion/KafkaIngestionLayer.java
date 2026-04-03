@@ -16,9 +16,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Layer 1 — Ingestion & Parsing.
- * Consumes raw JSON from Kafka topics and deserializes into typed POJOs.
+ * Consumes raw JSON from two Kafka topics (data_topic and request_topic)
+ * and deserializes into typed POJOs (Datapoint and Request).
  *
- * Replaces: kafkaStringConsumer + inline MapFunction from Flink Run.java
+ * Uses Kryo encoding for the output Datasets to support efficient serialization
+ * across Spark partitions. Invalid messages are logged and filtered out.
  */
 public class KafkaIngestionLayer {
 

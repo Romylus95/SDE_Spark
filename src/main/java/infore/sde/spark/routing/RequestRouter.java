@@ -10,11 +10,13 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Layer 2 — Request fan-out.
+ * Layer 2 — Request fan-out (standalone variant).
  * Expands a single request into N partition-specific copies when noOfP > 1.
  * Each copy is stamped with a unique routing key: "{dataSetKey}_{noOfP}_KEYED_{i}"
  *
- * Replaces: RqRouterFlatMap.java from Flink
+ * Note: In the main pipeline, this fan-out logic is handled by DataRouter
+ * (which combines request and data routing in a single stateful operator).
+ * This class is retained for testing and standalone use cases.
  */
 public class RequestRouter implements FlatMapFunction<Request, Request> {
 
