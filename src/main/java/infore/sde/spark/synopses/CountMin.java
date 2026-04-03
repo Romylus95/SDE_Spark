@@ -5,6 +5,14 @@ import infore.sde.spark.messages.Estimation;
 import infore.sde.spark.messages.Request;
 import infore.sde.spark.synopses.sketches.CM;
 
+/**
+ * CountMin Sketch synopsis — frequency estimation.
+ * Estimates the total accumulated value for a given key (e.g., total price per stock).
+ * Uses a custom CM sketch implementation with configurable epsilon and delta.
+ *
+ * Unlike other synopsis types, CountMin does not require the snapshot/restore pattern
+ * because the CM class is fully Serializable (no transient fields).
+ */
 public class CountMin extends Synopsis {
 
     private static final long serialVersionUID = 1L;

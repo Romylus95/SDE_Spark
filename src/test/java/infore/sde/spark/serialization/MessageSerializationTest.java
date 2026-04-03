@@ -9,15 +9,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies that JSON wire format matches the Flink SDE contract exactly.
- * The @JsonProperty annotations must preserve original field naming.
+ * Verifies that JSON wire format matches the SDE Kafka contract.
+ * The @JsonProperty annotations must preserve the original field naming
+ * (e.g., "dataSetkey" with lowercase 'k') for upstream/downstream compatibility.
  */
 class MessageSerializationTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    void datapointDeserializesFromFlinkFormat() throws Exception {
+    void datapointDeserializesFromKafkaFormat() throws Exception {
         String json = """
                 {
                   "dataSetkey": "Forex",
@@ -34,7 +35,7 @@ class MessageSerializationTest {
     }
 
     @Test
-    void requestDeserializesFromFlinkFormat() throws Exception {
+    void requestDeserializesFromKafkaFormat() throws Exception {
         String json = """
                 {
                   "dataSetkey": "Forex",
@@ -58,7 +59,7 @@ class MessageSerializationTest {
     }
 
     @Test
-    void estimationSerializesToFlinkFormat() throws Exception {
+    void estimationSerializesToKafkaFormat() throws Exception {
         Estimation est = new Estimation(42, "Forex_42", 3, 1,
                 "Forex", 2, new String[]{"StockID", "price"}, 1);
         est.setStreamID("EURUSD");

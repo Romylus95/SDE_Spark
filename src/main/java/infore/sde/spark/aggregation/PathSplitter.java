@@ -6,11 +6,11 @@ import org.apache.spark.sql.Dataset;
 
 /**
  * Layer 4 — Path Splitting.
- * Routes estimations based on noOfP:
- *   GREEN  (noOfP == 1) -> direct to output
- *   PURPLE (noOfP  > 1) -> to ReduceAggregator first
+ * Routes estimations into two processing paths based on the parallelism level (noOfP):
+ *   GREEN  (noOfP == 1) -> single synopsis instance, direct to output (Layer 6)
+ *   PURPLE (noOfP  > 1) -> multiple parallel instances, routed to ReduceAggregator (Layer 5) first
  *
- * Replaces: SplitStream / OutputSelector from Flink Run.java
+ * This is a stateless filter applied on the Estimation Dataset.
  */
 public class PathSplitter {
 

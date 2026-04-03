@@ -19,15 +19,22 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Layer 3 — The heart of the SDE pipeline.
- * Processes both data events and request commands via flatMapGroupsWithState.
+ * Layer 3 — The core of the SDE pipeline.
+ * Manages the full synopsis lifecycle via flatMapGroupsWithState, keyed by dataset key.
  *
- * Handles:
- *   ADD (requestID=1,4)  -> create synopsis via SynopsisFactory, store in state
- *   DATA                 -> iterate active synopses, call add()
- *   ESTIMATE (requestID=3) -> call synopsis.estimate(), emit Estimation
- *   DELETE (requestID=2)   -> remove synopsis from state
- *   TIMEOUT              -> evict stale state, emit eviction notices
+ * Operations (determined by requestID % 10):
+ *   ADD (op=1)      -> create synopsis via SynopsisFactory, store in GroupState
+ *   DELETE (op=2)   -> remove synopsis from state
+ *   ESTIMATE (op=3) -> call synopsis.estimate(), emit Estimation to downstream layers
+ *   DATA            -> iterate all active synopses for this key, call add() with values
+ *   TIMEOUT         -> evict stale state, emit eviction notices to output topic
+ *
+ * Events within each micro-batch are sorted: ADD first, then DATA, then ESTIMATE/DELETE.
+ * This ensures synopses exist before data arrives and data is added before estimates run.
+ *
+ * State is held in-memory (SynopsisProcessorState) and checkpointed to HDFS/S3
+ * after each micro-batch. Synopsis objects with transient fields (BloomFilter, AMS, HLL)
+ * use the snapshot/restore byte-array pattern to survive Kryo serialization.
  */
 public class SynopsisProcessor
         implements FlatMapGroupsWithStateFunction<String, InputEvent, SynopsisProcessorState, Estimation> {

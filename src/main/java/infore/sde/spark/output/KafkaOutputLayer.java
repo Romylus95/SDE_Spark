@@ -16,9 +16,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Layer 6 — Output.
- * Serializes Estimation results to JSON and writes to Kafka output topic.
+ * Serializes Estimation results to JSON and writes them to the Kafka output topic
+ * (estimation_topic by default). Supports configurable Kafka producer settings
+ * including acks, compression, and idempotence via SDEConfig.
  *
- * Replaces: kafkaProducerEstimation + addSink() from Flink Run.java
+ * Each estimation is serialized to JSON using Jackson and written as both
+ * the key and value of a Kafka ProducerRecord.
  */
 public class KafkaOutputLayer {
 

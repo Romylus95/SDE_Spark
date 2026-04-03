@@ -8,6 +8,16 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+/**
+ * HyperLogLog synopsis — cardinality (distinct count) estimation.
+ * Estimates the number of distinct elements in a data stream using sub-linear space.
+ * Uses the streaminer HyperLogLog implementation.
+ *
+ * The HyperLogLog object is transient (not directly serializable by Kryo).
+ * State is preserved via the snapshot/restore byte-array pattern:
+ * snapshotState() captures hll.getBytes() before each checkpoint,
+ * ensureHll() rebuilds from hllBytes on first access after restore.
+ */
 public class HyperLogLogSynopsis extends Synopsis {
 
     private static final long serialVersionUID = 1L;

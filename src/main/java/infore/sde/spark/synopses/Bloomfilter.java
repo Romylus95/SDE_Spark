@@ -9,6 +9,16 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+/**
+ * Bloom Filter synopsis — probabilistic membership testing.
+ * Answers "has item X been seen?" with no false negatives and a configurable
+ * false positive rate. Uses the stream-lib BloomFilter implementation.
+ *
+ * The BloomFilter object is transient (not directly serializable by Kryo).
+ * State is preserved across checkpoints via the snapshot/restore byte-array pattern:
+ * snapshotState() serializes to bloomFilterBytes before each checkpoint,
+ * ensureBloomFilter() deserializes on first access after restore.
+ */
 public class Bloomfilter extends Synopsis {
 
     private static final long serialVersionUID = 1L;
