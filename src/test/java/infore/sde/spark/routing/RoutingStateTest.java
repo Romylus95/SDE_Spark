@@ -9,19 +9,7 @@ class RoutingStateTest {
     @Test
     void initialStateIsEmpty() {
         RoutingState state = new RoutingState();
-        assertThat(state.getKeyedParallelism()).isEmpty();
         assertThat(state.getRegistrations()).isEmpty();
-    }
-
-    @Test
-    void registerParallelism() {
-        RoutingState state = new RoutingState();
-        state.getKeyedParallelism().merge(2, 1, Integer::sum);
-        assertThat(state.getKeyedParallelism()).containsEntry(2, 1);
-
-        // Second registration with same parallelism increments count
-        state.getKeyedParallelism().merge(2, 1, Integer::sum);
-        assertThat(state.getKeyedParallelism()).containsEntry(2, 2);
     }
 
     @Test

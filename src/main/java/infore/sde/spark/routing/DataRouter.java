@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Layer 2 — Unified request + data routing with stateful fan-out.
@@ -99,7 +101,7 @@ public class DataRouter
             handleRequest(event.getRequest(), routingState, output);
         }
 
-        if (routingState.getRegistrations().isEmpty() && routingState.getKeyedParallelism().isEmpty()) {
+        if (routingState.getRegistrations().isEmpty()) {
             state.remove();
         } else {
             state.update(routingState);
@@ -119,8 +121,6 @@ public class DataRouter
                 return;
             }
             if (rq.getNoOfP() > 1) {
-                Map<Integer, Integer> keyed = routingState.getKeyedParallelism();
-                keyed.merge(rq.getNoOfP(), 1, Integer::sum);
                 LOG.info("DataRouter: registered parallelism={} for uid={} on key={}",
                         rq.getNoOfP(), rq.getUid(), rq.getDataSetKey());
 
@@ -144,13 +144,6 @@ public class DataRouter
             // DELETE: unregister and fan out
             RoutingState.RoutingRegistration reg = routingState.getRegistrations().remove(rq.getUid());
             if (reg != null && reg.getNoOfP() > 1) {
-                Map<Integer, Integer> keyed = routingState.getKeyedParallelism();
-                int remaining = keyed.getOrDefault(reg.getNoOfP(), 1) - 1;
-                if (remaining <= 0) {
-                    keyed.remove(reg.getNoOfP());
-                } else {
-                    keyed.put(reg.getNoOfP(), remaining);
-                }
                 // Fan out DELETE to keyed partition keys
                 String baseKey = reg.getDataSetKey();
                 for (int i = 0; i < reg.getNoOfP(); i++) {
@@ -184,16 +177,17 @@ public class DataRouter
 
     private void handleData(Datapoint datapoint, RoutingState routingState,
                             List<InputEvent> output) {
-        Map<Integer, Integer> keyedParallelism = routingState.getKeyedParallelism();
+        Set<Integer> activeLevels = routingState.getRegistrations().values().stream()
+                .map(RoutingState.RoutingRegistration::getNoOfP)
+                .filter(p -> p > 1)
+                .collect(Collectors.toSet());
 
-        if (keyedParallelism.isEmpty()) {
-            // No parallelism registered — forward data with original key
+        if (activeLevels.isEmpty()) {
             output.add(InputEvent.data(datapoint));
             return;
         }
 
-        // For each registered parallelism level, hash and route
-        for (int parallelism : keyedParallelism.keySet()) {
+        for (int parallelism : activeLevels) {
             String baseKey = datapoint.getDataSetKey();
             // Hash the stream data to pick the correct partition
             int slot = Math.abs(datapoint.getStreamID().hashCode()) % parallelism;
