@@ -98,6 +98,15 @@ src/main/java/infore/sde/spark/
 - `values` — arbitrary JSON payload; algorithm accesses fields by name via params
 
 ### request_topic → Request.java
+
+All three operations share the same message shape. `requestID % 10` determines the operation.
+
+- `requestID`: `1`=ADD, `2`=DELETE, `3`=ESTIMATE  (actual op = `requestID % 10`)
+- `synopsisID`: `1`=CountMin, `2`=BloomFilter, `3`=AMS, `4`=HyperLogLog
+- `uid`: unique synopsis instance ID
+- `noOfP`: `1`=GREEN (single worker), `>1`=PURPLE (parallel fan-out)
+
+#### ADD — all fields required
 ```json
 {
   "dataSetkey": "Forex",
@@ -109,17 +118,56 @@ src/main/java/infore/sde/spark/
   "noOfP":      1
 }
 ```
-- `requestID`: `1`=ADD, `2`=DELETE, `3`=ESTIMATE  (actual op = `requestID % 10`)
-- `synopsisID`: `1`=CountMin, `2`=BloomFilter, `3`=AMS, `4`=HyperLogLog
-- `uid`: unique synopsis instance ID
-- `noOfP`: `1`=GREEN (single worker), `>1`=PURPLE (parallel fan-out)
-- `param` contents depend on algorithm (see Synopsis Algorithms section)
+`synopsisID`, `uid`, and `param` are passed directly to `SynopsisFactory.create()`. `param` contents depend on algorithm (see Synopsis Algorithms section).
+
+#### DELETE — only `dataSetkey`, `requestID`, `uid`, `noOfP` are used
+```json
+{
+  "dataSetkey": "Forex",
+  "requestID":  2,
+  "uid":        42,
+  "synopsisID": 0,
+  "streamID":   "",
+  "param":      [],
+  "noOfP":      1
+}
+```
+`synopsisID`, `streamID`, and `param` are ignored by `SynopsisProcessor.handleDelete()`. **`noOfP` must match the value used on ADD** — DataRouter uses it to fan out the DELETE to all keyed partition keys on the PURPLE path.
+
+#### ESTIMATE — `uid` + `param[0]` (query key)
+```json
+{
+  "dataSetkey": "Forex",
+  "requestID":  3,
+  "synopsisID": 1,
+  "uid":        42,
+  "streamID":   "ALL",
+  "param":      ["AAPL"],
+  "noOfP":      1
+}
+```
+`uid` identifies which synopsis to query. `param[0]` is the lookup key for CountMin, BloomFilter, and AMS. HyperLogLog ignores `param` entirely (returns cardinality count). **`noOfP` is ignored** — DataRouter derives the fan-out from the stored registration (same as DELETE). Send `1` or omit.
+
+#### Required fields per operation
+
+| Field | ADD | DELETE | ESTIMATE |
+|-------|-----|--------|----------|
+| `dataSetkey` | required | required | required |
+| `requestID` | `1` | `2` | `3` |
+| `uid` | required | required | required |
+| `synopsisID` | required | ignored | ignored |
+| `noOfP` | required | ignored (read from registration) | ignored (read from registration) |
+| `streamID` | passed through | ignored | passed through |
+| `param` | required (algorithm config) | ignored | `param[0]` = query key (except HLL) |
 
 ### estimation_topic → Estimation.java
+
+#### Normal ESTIMATE result
 ```json
 {
   "key":           "Forex",
   "estimationkey": "42",
+  "streamID":      "ALL",
   "uid":           42,
   "requestID":     3,
   "synopsisID":    1,
@@ -129,7 +177,21 @@ src/main/java/infore/sde/spark/
 }
 ```
 - `estimation` type: `Long` (CountMin/HLL), `Double` (AMS), `Boolean` (BloomFilter)
-- `requestID=-1` signals eviction notice (TTL expired, client must re-register)
+
+#### TTL eviction notice (`requestID = -1`)
+```json
+{
+  "key":           "Forex",
+  "estimationkey": "Forex_42",
+  "uid":           42,
+  "requestID":     -1,
+  "synopsisID":    1,
+  "estimation":    "EVICTED: inactive for TTL period. Re-register synopsis uid=42 to resume.",
+  "param":         [],
+  "noOfP":         1
+}
+```
+Client must re-register on receiving `requestID=-1`.
 
 ---
 
@@ -181,7 +243,7 @@ USDJPY → hash % 2 = 1 → Forex_2_KEYED_1  (Worker 1)
 ```
 Same streamID always routes to the same worker → consistent state partitioning.
 
-**On ESTIMATE:** Fan out to all N keyed partition keys. Each worker emits a partial `Estimation{noOfP=2}`. PathSplitter routes to ReduceAggregator. ReduceAggregator buffers until `count == noOfP`, then merges.
+**On ESTIMATE:** DataRouter looks up `noOfP` from the stored registration (same as DELETE — client does not need to supply it). Fans out to all N keyed partition keys. Each worker emits a partial `Estimation{noOfP=N}`. PathSplitter routes to ReduceAggregator. ReduceAggregator buffers until `count == noOfP`, then merges.
 
 **On DELETE:** Fan out DELETE to all N keyed partition keys. Remove uid from `registrations`; the level stops being active automatically once no registration references it.
 
