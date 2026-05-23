@@ -158,15 +158,20 @@ public class DataRouter
             }
 
         } else {
-            // ESTIMATE, etc.
-            if (rq.getNoOfP() > 1) {
-                // Fan out to keyed partition keys
+            // ESTIMATE — derive noOfP from stored registration, not from the incoming message.
+            // The client should not need to know or repeat the parallelism level at query time.
+            RoutingState.RoutingRegistration reg = routingState.getRegistrations().get(rq.getUid());
+            if (reg == null) {
+                LOG.warn("DataRouter: ESTIMATE for unknown uid={}, no registration found, forwarding as-is", rq.getUid());
+                output.add(InputEvent.request(rq));
+            } else if (reg.getNoOfP() > 1) {
                 String baseKey = rq.getDataSetKey();
-                for (int i = 0; i < rq.getNoOfP(); i++) {
+                int fanOut = reg.getNoOfP();
+                for (int i = 0; i < fanOut; i++) {
                     Request copy = new Request(
-                            baseKey + "_" + rq.getNoOfP() + "_KEYED_" + i,
+                            baseKey + "_" + fanOut + "_KEYED_" + i,
                             rq.getRequestID(), rq.getSynopsisID(), rq.getUid(),
-                            rq.getStreamID(), rq.getParam(), rq.getNoOfP());
+                            rq.getStreamID(), rq.getParam(), fanOut);
                     output.add(InputEvent.request(copy));
                 }
             } else {
