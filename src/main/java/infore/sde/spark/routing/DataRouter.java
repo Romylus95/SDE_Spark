@@ -124,42 +124,47 @@ public class DataRouter
                 LOG.info("DataRouter: registered parallelism={} for uid={} on key={}",
                         rq.getNoOfP(), rq.getUid(), rq.getDataSetKey());
 
-                // Fan out to keyed partition keys (replaces RequestRouter for noOfP>1)
+                // Fan out to keyed partition keys; streamID is not used for ADD
                 String baseKey = rq.getDataSetKey();
                 for (int i = 0; i < rq.getNoOfP(); i++) {
                     Request copy = new Request(
                             baseKey + "_" + rq.getNoOfP() + "_KEYED_" + i,
                             rq.getRequestID(), rq.getSynopsisID(), rq.getUid(),
-                            rq.getStreamID(), rq.getParam(), rq.getNoOfP());
+                            null, rq.getParam(), rq.getNoOfP());
                     output.add(InputEvent.request(copy));
                 }
             } else {
-                // noOfP=1: forward as-is
-                output.add(InputEvent.request(rq));
+                // noOfP=1: forward as copy without streamID (unused for ADD)
+                Request copy = new Request(
+                        rq.getDataSetKey(), rq.getRequestID(), rq.getSynopsisID(), rq.getUid(),
+                        null, rq.getParam(), rq.getNoOfP());
+                output.add(InputEvent.request(copy));
             }
             routingState.getRegistrations().put(rq.getUid(),
                     new RoutingState.RoutingRegistration(rq.getRequestID(), rq.getNoOfP(), rq.getDataSetKey()));
 
         } else if (operation == 2) {
-            // DELETE: unregister and fan out
+            // DELETE: unregister and fan out; only dataSetkey, requestID, uid are used
             RoutingState.RoutingRegistration reg = routingState.getRegistrations().remove(rq.getUid());
             if (reg != null && reg.getNoOfP() > 1) {
-                // Fan out DELETE to keyed partition keys
                 String baseKey = reg.getDataSetKey();
                 for (int i = 0; i < reg.getNoOfP(); i++) {
                     Request copy = new Request(
                             baseKey + "_" + reg.getNoOfP() + "_KEYED_" + i,
-                            rq.getRequestID(), rq.getSynopsisID(), rq.getUid(),
-                            rq.getStreamID(), rq.getParam(), rq.getNoOfP());
+                            rq.getRequestID(), 0, rq.getUid(),
+                            null, null, reg.getNoOfP());
                     output.add(InputEvent.request(copy));
                 }
             } else {
-                output.add(InputEvent.request(rq));
+                Request copy = new Request(
+                        rq.getDataSetKey(), rq.getRequestID(), 0, rq.getUid(),
+                        null, null, 1);
+                output.add(InputEvent.request(copy));
             }
 
         } else {
-            // ESTIMATE — derive noOfP from stored registration, not from the incoming message.
-            // The client should not need to know or repeat the parallelism level at query time.
+            // ESTIMATE — derive noOfP from stored registration; strip synopsisID and streamID
+            // (synopsisID is restored by SynopsisProcessor from the stored synopsis object)
             RoutingState.RoutingRegistration reg = routingState.getRegistrations().get(rq.getUid());
             if (reg == null) {
                 LOG.warn("DataRouter: ESTIMATE for unknown uid={}, no registration found, forwarding as-is", rq.getUid());
@@ -170,12 +175,15 @@ public class DataRouter
                 for (int i = 0; i < fanOut; i++) {
                     Request copy = new Request(
                             baseKey + "_" + fanOut + "_KEYED_" + i,
-                            rq.getRequestID(), rq.getSynopsisID(), rq.getUid(),
-                            rq.getStreamID(), rq.getParam(), fanOut);
+                            rq.getRequestID(), 0, rq.getUid(),
+                            null, rq.getParam(), fanOut);
                     output.add(InputEvent.request(copy));
                 }
             } else {
-                output.add(InputEvent.request(rq));
+                Request copy = new Request(
+                        rq.getDataSetKey(), rq.getRequestID(), 0, rq.getUid(),
+                        null, rq.getParam(), reg.getNoOfP());
+                output.add(InputEvent.request(copy));
             }
         }
     }
