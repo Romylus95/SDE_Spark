@@ -193,6 +193,7 @@ public class SynopsisProcessor
 
         Estimation estimation = synopsis.estimate(rq);
         if (estimation != null && estimation.getEstimation() != null) {
+            estimation.setSynopsisID(synopsis.getSynopsisID());
             if (metrics != null) metrics.incEstimationsEmitted();
             output.add(estimation);
         }

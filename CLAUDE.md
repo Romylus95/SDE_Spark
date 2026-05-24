@@ -106,47 +106,39 @@ All three operations share the same message shape. `requestID % 10` determines t
 - `uid`: unique synopsis instance ID
 - `noOfP`: `1`=GREEN (single worker), `>1`=PURPLE (parallel fan-out)
 
-#### ADD — all fields required
+#### ADD — all fields required except `streamID`
 ```json
 {
   "dataSetkey": "Forex",
   "requestID":  1,
   "synopsisID": 1,
   "uid":        42,
-  "streamID":   "ALL",
   "param":      ["StockID", "price", "Queryable", "0.01", "0.99", "42"],
   "noOfP":      1
 }
 ```
-`synopsisID`, `uid`, and `param` are passed directly to `SynopsisFactory.create()`. `param` contents depend on algorithm (see Synopsis Algorithms section).
+`synopsisID`, `uid`, and `param` are passed directly to `SynopsisFactory.create()`. `param` contents depend on algorithm (see Synopsis Algorithms section). `streamID` is not used for ADD and is stripped by DataRouter before forwarding.
 
-#### DELETE — only `dataSetkey`, `requestID`, `uid`, `noOfP` are used
+#### DELETE — only `dataSetkey`, `requestID`, `uid` are needed
 ```json
 {
   "dataSetkey": "Forex",
   "requestID":  2,
-  "uid":        42,
-  "synopsisID": 0,
-  "streamID":   "",
-  "param":      [],
-  "noOfP":      1
+  "uid":        42
 }
 ```
-`synopsisID`, `streamID`, and `param` are ignored by `SynopsisProcessor.handleDelete()`. **`noOfP` must match the value used on ADD** — DataRouter uses it to fan out the DELETE to all keyed partition keys on the PURPLE path.
+All other fields (`synopsisID`, `streamID`, `param`, `noOfP`) are stripped by DataRouter. Fan-out parallelism is derived from the stored registration, same as ESTIMATE.
 
-#### ESTIMATE — `uid` + `param[0]` (query key)
+#### ESTIMATE — only `dataSetkey`, `requestID`, `uid`, `param` needed
 ```json
 {
   "dataSetkey": "Forex",
   "requestID":  3,
-  "synopsisID": 1,
   "uid":        42,
-  "streamID":   "ALL",
-  "param":      ["AAPL"],
-  "noOfP":      1
+  "param":      ["AAPL"]
 }
 ```
-`uid` identifies which synopsis to query. `param[0]` is the lookup key for CountMin, BloomFilter, and AMS. HyperLogLog ignores `param` entirely (returns cardinality count). **`noOfP` is ignored** — DataRouter derives the fan-out from the stored registration (same as DELETE). Send `1` or omit.
+`uid` identifies which synopsis to query. `param[0]` is the lookup key for CountMin, BloomFilter, and AMS. HyperLogLog ignores `param` entirely (returns cardinality count). `synopsisID`, `streamID`, and `noOfP` are all stripped by DataRouter — `noOfP` is derived from the stored registration; `synopsisID` is restored by `SynopsisProcessor` from the stored synopsis object.
 
 #### Required fields per operation
 
@@ -155,10 +147,10 @@ All three operations share the same message shape. `requestID % 10` determines t
 | `dataSetkey` | required | required | required |
 | `requestID` | `1` | `2` | `3` |
 | `uid` | required | required | required |
-| `synopsisID` | required | ignored | ignored |
-| `noOfP` | required | ignored (read from registration) | ignored (read from registration) |
-| `streamID` | passed through | ignored | passed through |
-| `param` | required (algorithm config) | ignored | `param[0]` = query key (except HLL) |
+| `synopsisID` | required | **not used** (stripped) | **not used** (stripped, restored from stored synopsis) |
+| `noOfP` | required | **not used** (stripped, read from registration) | **not used** (stripped, read from registration) |
+| `streamID` | **not used** (stripped) | **not used** (stripped) | **not used** (stripped) |
+| `param` | required (algorithm config) | **not used** (stripped) | `param[0]` = query key (except HLL) |
 
 ### estimation_topic → Estimation.java
 
