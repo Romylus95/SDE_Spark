@@ -31,9 +31,10 @@ import java.util.stream.Collectors;
  *   - Routes to all registered keyed partition keys (hash-based slot assignment)
  *   - Also forwards with original key for noOfP=1 synopses
  *
- * Events within each micro-batch are sorted: ADD/DELETE first, then DATA, then ESTIMATE.
- * This ensures routing registrations are applied before data arrives, since
- * micro-batch event ordering is not guaranteed by Spark.
+ * Events within each micro-batch are processed in arrival order. If an ADD and DATA
+ * event arrive in the same batch, the data event may be processed before the registration
+ * exists — that batch's data is missed for the new synopsis. This is an accepted
+ * one-batch imprecision at registration time.
  *
  * Supports processing-time timeout to evict stale routing state for inactive keys.
  */
@@ -69,36 +70,14 @@ public class DataRouter
             routingState = new RoutingState();
         }
 
-        // Sort events: ADD/DELETE requests first, then data, then other requests.
-        // This ensures routing registrations are applied before data arrives
-        // (micro-batch event order is arbitrary).
-        List<InputEvent> addDeleteRequests = new ArrayList<>();
-        List<InputEvent> dataEvents = new ArrayList<>();
-        List<InputEvent> otherRequests = new ArrayList<>();
-
         while (events.hasNext()) {
             InputEvent event = events.next();
             if (event == null) continue;
             if (event.isRequest() && event.getRequest() != null) {
-                int op = event.getRequest().getRequestID() % 10;
-                if (op == 1 || op == 2) {
-                    addDeleteRequests.add(event);
-                } else {
-                    otherRequests.add(event);
-                }
+                handleRequest(event.getRequest(), routingState, output);
             } else if (event.isData() && event.getDatapoint() != null) {
-                dataEvents.add(event);
+                handleData(event.getDatapoint(), routingState, output);
             }
-        }
-
-        for (InputEvent event : addDeleteRequests) {
-            handleRequest(event.getRequest(), routingState, output);
-        }
-        for (InputEvent event : dataEvents) {
-            handleData(event.getDatapoint(), routingState, output);
-        }
-        for (InputEvent event : otherRequests) {
-            handleRequest(event.getRequest(), routingState, output);
         }
 
         if (routingState.getRegistrations().isEmpty()) {

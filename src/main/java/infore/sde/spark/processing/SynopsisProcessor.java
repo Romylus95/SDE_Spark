@@ -29,8 +29,11 @@ import java.util.List;
  *   DATA            -> iterate all active synopses for this key, call add() with values
  *   TIMEOUT         -> evict stale state, emit eviction notices to output topic
  *
- * Events within each micro-batch are sorted: ADD first, then DATA, then ESTIMATE/DELETE.
- * This ensures synopses exist before data arrives and data is added before estimates run.
+ * Events within each micro-batch are processed in arrival order. If an ADD and DATA
+ * event arrive in the same batch, data may be processed before the synopsis exists —
+ * that batch's data is missed. If an ESTIMATE arrives before DATA in the same batch,
+ * the result reflects state before the current batch. Both are accepted one-batch
+ * imprecisions at transition points.
  *
  * State is held in-memory (SynopsisProcessorState) and checkpointed to HDFS/S3
  * after each micro-batch. Synopsis objects with transient fields (BloomFilter, AMS, HLL)
@@ -79,36 +82,13 @@ public class SynopsisProcessor
             currentState = new SynopsisProcessorState();
         }
 
-        // Collect and sort events: ADD requests first, then DATA, then ESTIMATE/DELETE.
-        // Within a micro-batch, event order is not guaranteed. Sorting ensures synopses
-        // are created before data is added, and data is added before estimates are run.
-        List<InputEvent> addRequests = new ArrayList<>();
-        List<InputEvent> dataEvents = new ArrayList<>();
-        List<InputEvent> otherRequests = new ArrayList<>();
-
         while (events.hasNext()) {
             InputEvent event = events.next();
             if (event.isRequest()) {
-                int op = event.getRequest().getRequestID() % 10;
-                if (op == 1) {
-                    addRequests.add(event);
-                } else {
-                    otherRequests.add(event);
-                }
+                handleRequest(event.getRequest(), currentState, output);
             } else {
-                dataEvents.add(event);
+                handleData(event.getDatapoint(), currentState);
             }
-        }
-
-        // Process in order: ADDs → DATA → ESTIMATE/DELETE
-        for (InputEvent event : addRequests) {
-            handleRequest(event.getRequest(), currentState, output);
-        }
-        for (InputEvent event : dataEvents) {
-            handleData(event.getDatapoint(), currentState);
-        }
-        for (InputEvent event : otherRequests) {
-            handleRequest(event.getRequest(), currentState, output);
         }
 
         // Update state and reset timeout

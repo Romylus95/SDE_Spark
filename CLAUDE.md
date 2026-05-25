@@ -18,7 +18,7 @@ Kafka (data_topic + request_topic)
         ↓
 Layer 1  KafkaIngestionLayer     JSON bytes → Datapoint/Request POJOs (Jackson + Kryo)
         ↓
-Layer 2  DataRouter              Union stream, sort events per batch, hash-route data, fan-out requests
+Layer 2  DataRouter              Union stream, hash-route data, fan-out requests
         ↓
 Layer 3  SynopsisProcessor       Synopsis lifecycle: ADD / DATA / ESTIMATE / DELETE / TIMEOUT
         ↓
@@ -202,10 +202,11 @@ Active parallelism levels are derived on the fly from `registrations.values()` �
 TTL: 1 day (evicts if no events arrive for that key).
 
 ### Event ordering within each micro-batch
-Spark delivers events within a micro-batch in undefined order. DataRouter sorts them:
-1. ADD / DELETE requests first (register before routing)
-2. DATA events second
-3. ESTIMATE and other requests last
+Events within a micro-batch are processed in arrival order — no sorting is applied.
+If an ADD and DATA event arrive in the same batch, data may be processed before the
+registration exists and that batch's data is missed for the new synopsis. If an ESTIMATE
+arrives before DATA in the same batch, the result reflects state before the current batch.
+Both are accepted one-batch imprecisions at transition points.
 
 ### GREEN path (noOfP == 1)
 Request and data forwarded with original key unchanged. No fan-out.
