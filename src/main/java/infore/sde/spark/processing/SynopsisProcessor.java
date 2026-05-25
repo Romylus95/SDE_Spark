@@ -167,7 +167,15 @@ public class SynopsisProcessor
                                 List<Estimation> output) {
         Synopsis synopsis = currentState.getSynopsis(rq.getUid());
         if (synopsis == null) {
-            LOG.warn("ESTIMATE requested for non-existent synopsis uid={}", rq.getUid());
+            LOG.warn("ESTIMATE requested for non-existent synopsis uid={}, emitting error notice", rq.getUid());
+            Estimation notice = new Estimation(
+                    rq.getUid(),
+                    rq.getDataSetKey() + "_" + rq.getUid(),
+                    -1, 0,
+                    rq.getDataSetKey(),
+                    "ERROR: synopsis uid=" + rq.getUid() + " does not exist. Re-register before querying.",
+                    new String[0], 1);
+            output.add(notice);
             return;
         }
 
