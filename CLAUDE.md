@@ -170,7 +170,11 @@ All other fields (`synopsisID`, `streamID`, `param`, `noOfP`) are stripped by Da
 ```
 - `estimation` type: `Long` (CountMin/HLL), `Double` (AMS), `Boolean` (BloomFilter)
 
-#### TTL eviction notice (`requestID = -1`)
+#### Error notice (`requestID = -1`)
+
+`requestID=-1` is used for two cases — the `estimation` field distinguishes them:
+
+**TTL eviction** (emitted by `SynopsisProcessor` on state timeout):
 ```json
 {
   "key":           "Forex",
@@ -183,6 +187,21 @@ All other fields (`synopsisID`, `streamID`, `param`, `noOfP`) are stripped by Da
   "noOfP":         1
 }
 ```
+
+**Synopsis not found** (emitted when ESTIMATE arrives for a deleted or unknown uid):
+```json
+{
+  "key":           "Forex",
+  "estimationkey": "Forex_42",
+  "uid":           42,
+  "requestID":     -1,
+  "synopsisID":    0,
+  "estimation":    "ERROR: synopsis uid=42 does not exist. Re-register before querying.",
+  "param":         [],
+  "noOfP":         1
+}
+```
+
 Client must re-register on receiving `requestID=-1`.
 
 ---
