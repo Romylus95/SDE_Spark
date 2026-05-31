@@ -36,25 +36,27 @@ public class SynopsisFactory {
                     synopsisID, uid, MIN_PARAMS[synopsisID], params.length));
         }
 
-        Synopsis synopsis = switch (synopsisID) {
-            case 1 -> {
+        Synopsis synopsis;
+        switch (synopsisID) {
+            case 1:
                 LOG.info("Creating CountMin sketch uid={}", uid);
-                yield new CountMin(uid, params);
-            }
-            case 2 -> {
+                synopsis = new CountMin(uid, params);
+                break;
+            case 2:
                 LOG.info("Creating BloomFilter uid={}", uid);
-                yield new Bloomfilter(uid, params);
-            }
-            case 3 -> {
+                synopsis = new Bloomfilter(uid, params);
+                break;
+            case 3:
                 LOG.info("Creating AMS sketch uid={}", uid);
-                yield new AMSsynopsis(uid, params);
-            }
-            case 4 -> {
+                synopsis = new AMSsynopsis(uid, params);
+                break;
+            case 4:
                 LOG.info("Creating HyperLogLog uid={}", uid);
-                yield new HyperLogLogSynopsis(uid, params);
-            }
-            default -> throw new UnsupportedSynopsisException(synopsisID);
-        };
+                synopsis = new HyperLogLogSynopsis(uid, params);
+                break;
+            default:
+                throw new UnsupportedSynopsisException(synopsisID);
+        }
         synopsis.algorithmType = synopsisID;
         return synopsis;
     }

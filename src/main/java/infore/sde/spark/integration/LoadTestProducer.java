@@ -80,23 +80,43 @@ public class LoadTestProducer {
     private void parseArgs(String[] args) {
         for (int i = 0; i < args.length - 1; i++) {
             switch (args[i]) {
-                case "--brokers" -> brokers = args[++i];
-                case "--data-topic" -> dataTopic = args[++i];
-                case "--request-topic" -> requestTopic = args[++i];
-                case "--rate" -> rate = Integer.parseInt(args[++i]);
-                case "--duration" -> durationSec = Integer.parseInt(args[++i]);
-                case "--num-streams" -> numStreams = Integer.parseInt(args[++i]);
-                case "--num-synopses" -> numSynopses = Integer.parseInt(args[++i]);
-                case "--noop" -> noOfP = Integer.parseInt(args[++i]);
-                case "--estimate-interval" -> estimateIntervalSec = Integer.parseInt(args[++i]);
-                case "--warmup" -> warmupSec = Integer.parseInt(args[++i]);
-                case "--synopsis-types" -> {
+                case "--brokers":
+                    brokers = args[++i];
+                    break;
+                case "--data-topic":
+                    dataTopic = args[++i];
+                    break;
+                case "--request-topic":
+                    requestTopic = args[++i];
+                    break;
+                case "--rate":
+                    rate = Integer.parseInt(args[++i]);
+                    break;
+                case "--duration":
+                    durationSec = Integer.parseInt(args[++i]);
+                    break;
+                case "--num-streams":
+                    numStreams = Integer.parseInt(args[++i]);
+                    break;
+                case "--num-synopses":
+                    numSynopses = Integer.parseInt(args[++i]);
+                    break;
+                case "--noop":
+                    noOfP = Integer.parseInt(args[++i]);
+                    break;
+                case "--estimate-interval":
+                    estimateIntervalSec = Integer.parseInt(args[++i]);
+                    break;
+                case "--warmup":
+                    warmupSec = Integer.parseInt(args[++i]);
+                    break;
+                case "--synopsis-types":
                     String[] parts = args[++i].split(",");
                     synopsisTypes = new int[parts.length];
                     for (int j = 0; j < parts.length; j++) {
                         synopsisTypes[j] = Integer.parseInt(parts[j].trim());
                     }
-                }
+                    break;
             }
         }
     }
@@ -344,13 +364,13 @@ public class LoadTestProducer {
     }
 
     private String[] getSynopsisParams(int synopsisID) {
-        return switch (synopsisID) {
-            case 1 -> new String[]{"StockID", "price", "Queryable", "0.002", "0.01", "42"}; // CountMin
-            case 2 -> new String[]{"StockID", "price", "0", "10000", "3"};                   // BloomFilter
-            case 3 -> new String[]{"StockID", "price", "0", "100", "5"};                      // AMS
-            case 4 -> new String[]{"StockID", "price", "0", "0.05"};                          // HyperLogLog
-            default -> new String[]{"StockID", "price", "0"};
-        };
+        switch (synopsisID) {
+            case 1: return new String[]{"StockID", "price", "Queryable", "0.002", "0.01", "42"}; // CountMin
+            case 2: return new String[]{"StockID", "price", "0", "10000", "3"};                   // BloomFilter
+            case 3: return new String[]{"StockID", "price", "0", "100", "5"};                      // AMS
+            case 4: return new String[]{"StockID", "price", "0", "0.05"};                          // HyperLogLog
+            default: return new String[]{"StockID", "price", "0"};
+        }
     }
 
     private String formatParams(String[] params) {

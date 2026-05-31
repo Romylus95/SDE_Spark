@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Layer 3 — The core of the SDE pipeline.
@@ -122,10 +123,17 @@ public class SynopsisProcessor
         int operation = rq.getRequestID() % 10;
 
         switch (operation) {
-            case 1 -> handleAdd(rq, currentState, output);
-            case 2 -> handleDelete(rq, currentState);
-            case 3 -> handleEstimate(rq, currentState, output);
-            default -> LOG.warn("Unsupported requestID={} for uid={}", rq.getRequestID(), rq.getUid());
+            case 1:
+                handleAdd(rq, currentState, output);
+                break;
+            case 2:
+                handleDelete(rq, currentState);
+                break;
+            case 3:
+                handleEstimate(rq, currentState, output);
+                break;
+            default:
+                LOG.warn("Unsupported requestID={} for uid={}", rq.getRequestID(), rq.getUid());
         }
     }
 
@@ -189,7 +197,7 @@ public class SynopsisProcessor
 
     private List<Estimation> buildEvictionNotices(String key, SynopsisProcessorState currentState) {
         List<Estimation> notices = new ArrayList<>();
-        for (var entry : currentState.getSynopses().entrySet()) {
+        for (Map.Entry<Integer, Synopsis> entry : currentState.getSynopses().entrySet()) {
             int uid = entry.getKey();
             Synopsis synopsis = entry.getValue();
             String message = "EVICTED: inactive for TTL period. Re-register synopsis uid=" + uid + " to resume.";

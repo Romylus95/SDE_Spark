@@ -44,7 +44,7 @@ public class SDEConfig implements Serializable {
      * CLI args on top (CLI wins over file).
      */
     public static SDEConfig fromArgs(String[] args) {
-        var config = new SDEConfig();
+        SDEConfig config = new SDEConfig();
 
         // First pass: look for --config flag to load a properties file
         for (int i = 0; i < args.length - 1; i++) {
@@ -57,27 +57,69 @@ public class SDEConfig implements Serializable {
         // Second pass: CLI args override file values
         for (int i = 0; i < args.length - 1; i++) {
             switch (args[i]) {
-                case "--config" -> i++; // skip, already handled
-                case "--data-topic" -> config.dataTopic = args[++i];
-                case "--request-topic" -> config.requestTopic = args[++i];
-                case "--output-topic" -> config.outputTopic = args[++i];
-                case "--kafka-brokers" -> config.kafkaBrokers = args[++i];
-                case "--trigger-interval" -> config.triggerInterval = args[++i];
-                case "--checkpoint-location" -> config.checkpointLocation = args[++i];
-                case "--safety-net-ttl" -> config.safetyNetTtl = Duration.parse(args[++i]);
-                case "--kafka-group-id" -> config.kafkaGroupId = args[++i];
-                case "--starting-offsets" -> config.startingOffsets = args[++i];
-                case "--routing-state-ttl" -> config.routingStateTtl = Duration.parse(args[++i]);
-                case "--aggregation-timeout" -> config.aggregationTimeout = Duration.parse(args[++i]);
-                case "--fail-on-data-loss" -> config.failOnDataLoss = Boolean.parseBoolean(args[++i]);
-                case "--kafka-producer-acks" -> config.kafkaProducerAcks = args[++i];
-                case "--kafka-producer-compression" -> config.kafkaProducerCompression = args[++i];
-                case "--kafka-producer-idempotence" -> config.kafkaProducerIdempotence = Boolean.parseBoolean(args[++i]);
-                case "--kafka-security-protocol" -> config.kafkaSecurityProtocol = args[++i];
-                case "--kafka-sasl-mechanism" -> config.kafkaSaslMechanism = args[++i];
-                case "--kafka-sasl-jaas-config" -> config.kafkaSaslJaasConfig = args[++i];
-                case "--kafka-ssl-truststore-location" -> config.kafkaSslTruststoreLocation = args[++i];
-                case "--kafka-ssl-truststore-password" -> config.kafkaSslTruststorePassword = args[++i];
+                case "--config":
+                    i++; // skip, already handled
+                    break;
+                case "--data-topic":
+                    config.dataTopic = args[++i];
+                    break;
+                case "--request-topic":
+                    config.requestTopic = args[++i];
+                    break;
+                case "--output-topic":
+                    config.outputTopic = args[++i];
+                    break;
+                case "--kafka-brokers":
+                    config.kafkaBrokers = args[++i];
+                    break;
+                case "--trigger-interval":
+                    config.triggerInterval = args[++i];
+                    break;
+                case "--checkpoint-location":
+                    config.checkpointLocation = args[++i];
+                    break;
+                case "--safety-net-ttl":
+                    config.safetyNetTtl = Duration.parse(args[++i]);
+                    break;
+                case "--kafka-group-id":
+                    config.kafkaGroupId = args[++i];
+                    break;
+                case "--starting-offsets":
+                    config.startingOffsets = args[++i];
+                    break;
+                case "--routing-state-ttl":
+                    config.routingStateTtl = Duration.parse(args[++i]);
+                    break;
+                case "--aggregation-timeout":
+                    config.aggregationTimeout = Duration.parse(args[++i]);
+                    break;
+                case "--fail-on-data-loss":
+                    config.failOnDataLoss = Boolean.parseBoolean(args[++i]);
+                    break;
+                case "--kafka-producer-acks":
+                    config.kafkaProducerAcks = args[++i];
+                    break;
+                case "--kafka-producer-compression":
+                    config.kafkaProducerCompression = args[++i];
+                    break;
+                case "--kafka-producer-idempotence":
+                    config.kafkaProducerIdempotence = Boolean.parseBoolean(args[++i]);
+                    break;
+                case "--kafka-security-protocol":
+                    config.kafkaSecurityProtocol = args[++i];
+                    break;
+                case "--kafka-sasl-mechanism":
+                    config.kafkaSaslMechanism = args[++i];
+                    break;
+                case "--kafka-sasl-jaas-config":
+                    config.kafkaSaslJaasConfig = args[++i];
+                    break;
+                case "--kafka-ssl-truststore-location":
+                    config.kafkaSslTruststoreLocation = args[++i];
+                    break;
+                case "--kafka-ssl-truststore-password":
+                    config.kafkaSslTruststorePassword = args[++i];
+                    break;
             }
         }
         return config;
