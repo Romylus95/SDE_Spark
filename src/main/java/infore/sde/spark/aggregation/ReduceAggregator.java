@@ -94,14 +94,11 @@ public class ReduceAggregator
         int noOfP = estimation.getNoOfP();
 
         return switch (synopsisID) {
-            case 1, 3, 4 -> new SimpleSumFunction(noOfP, 0, estimation.getParam(),
-                    synopsisID, estimation.getRequestID());
-            case 2 -> new SimpleORFunction(noOfP, 0, estimation.getParam(),
-                    synopsisID, estimation.getRequestID());
+            case 1, 3, 4 -> new SimpleSumFunction(noOfP, 0, synopsisID, estimation.getRequestID());
+            case 2 -> new SimpleORFunction(noOfP, 0, synopsisID, estimation.getRequestID());
             default -> {
                 LOG.warn("Unknown synopsisID={} for aggregation, using SimpleSumFunction", synopsisID);
-                yield new SimpleSumFunction(noOfP, 0, estimation.getParam(),
-                        synopsisID, estimation.getRequestID());
+                yield new SimpleSumFunction(noOfP, 0, synopsisID, estimation.getRequestID());
             }
         };
     }

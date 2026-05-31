@@ -11,7 +11,7 @@ class ReduceFunctionTest {
 
     @Test
     void simpleSumCollectsAndReduces() {
-        SimpleSumFunction sum = new SimpleSumFunction(3, 0, new String[]{}, 1, 3);
+        SimpleSumFunction sum = new SimpleSumFunction(3, 0, 1, 3);
 
         assertFalse(sum.add(makeEstimation("10.0")));
         assertFalse(sum.add(makeEstimation("20.0")));
@@ -22,7 +22,7 @@ class ReduceFunctionTest {
 
     @Test
     void simpleORReducesCorrectly() {
-        SimpleORFunction orFn = new SimpleORFunction(3, 0, new String[]{}, 2, 3);
+        SimpleORFunction orFn = new SimpleORFunction(3, 0, 2, 3);
 
         assertFalse(orFn.add(makeEstimation(false)));
         assertFalse(orFn.add(makeEstimation(true)));
@@ -33,7 +33,7 @@ class ReduceFunctionTest {
 
     @Test
     void simpleORAllFalse() {
-        SimpleORFunction orFn = new SimpleORFunction(2, 0, new String[]{}, 2, 3);
+        SimpleORFunction orFn = new SimpleORFunction(2, 0, 2, 3);
 
         assertFalse(orFn.add(makeEstimation(false)));
         assertTrue(orFn.add(makeEstimation(false)));

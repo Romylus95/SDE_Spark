@@ -30,11 +30,11 @@ public class HyperLogLogSynopsis extends Synopsis {
 
     /**
      * @param uid        unique synopsis instance ID
-     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode,
+     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode (ignored),
      *                   [3]=relativeStdDev (double)
      */
     public HyperLogLogSynopsis(int uid, String[] parameters) {
-        super(uid, parameters[0], parameters[1], parameters[2]);
+        super(uid, parameters[0], parameters[1]);
         this.relativeStdDev = Double.parseDouble(parameters[3]);
         this.hll = new HyperLogLog(relativeStdDev);
     }

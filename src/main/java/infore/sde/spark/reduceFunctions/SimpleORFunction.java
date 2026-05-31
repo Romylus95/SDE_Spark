@@ -16,8 +16,8 @@ public class SimpleORFunction extends ReduceFunction {
 
     private final List<Object> estimations = new ArrayList<>();
 
-    public SimpleORFunction(int noOfP, int count, String[] parameters, int synopsisID, int requestID) {
-        super(noOfP, count, parameters, synopsisID, requestID);
+    public SimpleORFunction(int noOfP, int count, int synopsisID, int requestID) {
+        super(noOfP, count, synopsisID, requestID);
     }
 
     @Override

@@ -153,7 +153,4 @@ public class ThroughputListener extends StreamingQueryListener {
         }
     }
 
-    public long getTotalRows() { return totalRows.get(); }
-    public long getTotalBatches() { return totalBatches.get(); }
-    public double getPeakProcessedPerSec() { return peakProcessedPerSec; }
 }

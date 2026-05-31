@@ -39,11 +39,11 @@ public class AMSsynopsis extends Synopsis {
 
     /**
      * @param uid        unique synopsis instance ID
-     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode,
+     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode (ignored),
      *                   [3]=buckets (int), [4]=depth (int)
      */
     public AMSsynopsis(int uid, String[] parameters) {
-        super(uid, parameters[0], parameters[1], parameters[2]);
+        super(uid, parameters[0], parameters[1]);
         this.buckets = Integer.parseInt(parameters[3]);
         this.depth = Integer.parseInt(parameters[4]);
         this.ams = new AMSSketch(buckets, depth);

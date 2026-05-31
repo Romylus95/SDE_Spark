@@ -10,8 +10,7 @@ import java.io.Serializable;
  * Abstract base class for all synopsis (probabilistic data structure) implementations.
  *
  * Each synopsis instance is identified by a unique uid (synopsisID field) and configured
- * with a keyIndex (which JSON field to use as the key), valueIndex (which field to aggregate),
- * and operationMode (e.g., "Queryable").
+ * with a keyIndex (which JSON field to use as the key) and valueIndex (which field to aggregate).
  *
  * Subclasses must implement:
  *   - add(values): ingest a data point from the stream
@@ -29,17 +28,11 @@ public abstract class Synopsis implements Serializable {
     protected int algorithmType; // algorithm type: 1=CountMin, 2=BloomFilter, 3=AMS, 4=HLL
     protected String keyIndex;   // JSON field name used as the key (e.g., "StockID")
     protected String valueIndex; // JSON field name used as the value (e.g., "price")
-    protected String operationMode; // operation mode (e.g., "Queryable")
 
     protected Synopsis(int uid, String keyIndex, String valueIndex) {
         this.synopsisID = uid;
         this.keyIndex = keyIndex;
         this.valueIndex = valueIndex;
-    }
-
-    protected Synopsis(int uid, String keyIndex, String valueIndex, String operationMode) {
-        this(uid, keyIndex, valueIndex);
-        this.operationMode = operationMode;
     }
 
     public abstract void add(JsonNode values);
@@ -67,6 +60,4 @@ public abstract class Synopsis implements Serializable {
     public String getKeyIndex() { return keyIndex; }
 
     public String getValueIndex() { return valueIndex; }
-
-    public String getOperationMode() { return operationMode; }
 }
