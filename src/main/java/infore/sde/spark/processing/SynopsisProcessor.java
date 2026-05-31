@@ -181,7 +181,7 @@ public class SynopsisProcessor
 
         Estimation estimation = synopsis.estimate(rq);
         if (estimation != null && estimation.getEstimation() != null) {
-            estimation.setSynopsisID(synopsis.getSynopsisID());
+            estimation.setSynopsisID(synopsis.getAlgorithmType());
             if (metrics != null) metrics.incEstimationsEmitted();
             output.add(estimation);
         }
@@ -198,7 +198,7 @@ public class SynopsisProcessor
                     uid,
                     key + "_" + uid,
                     -1,
-                    synopsis.getSynopsisID(),
+                    synopsis.getAlgorithmType(),
                     key,
                     message,
                     new String[0],

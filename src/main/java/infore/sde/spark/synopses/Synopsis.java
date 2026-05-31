@@ -26,6 +26,7 @@ public abstract class Synopsis implements Serializable {
     private static final long serialVersionUID = 1L;
 
     protected int synopsisID;    // unique instance identifier (uid from the ADD request)
+    protected int algorithmType; // algorithm type: 1=CountMin, 2=BloomFilter, 3=AMS, 4=HLL
     protected String keyIndex;   // JSON field name used as the key (e.g., "StockID")
     protected String valueIndex; // JSON field name used as the value (e.g., "price")
     protected String operationMode; // operation mode (e.g., "Queryable")
@@ -60,6 +61,8 @@ public abstract class Synopsis implements Serializable {
     }
 
     public int getSynopsisID() { return synopsisID; }
+
+    public int getAlgorithmType() { return algorithmType; }
 
     public String getKeyIndex() { return keyIndex; }
 

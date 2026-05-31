@@ -36,7 +36,7 @@ public class SynopsisFactory {
                     synopsisID, uid, MIN_PARAMS[synopsisID], params.length));
         }
 
-        return switch (synopsisID) {
+        Synopsis synopsis = switch (synopsisID) {
             case 1 -> {
                 LOG.info("Creating CountMin sketch uid={}", uid);
                 yield new CountMin(uid, params);
@@ -55,5 +55,7 @@ public class SynopsisFactory {
             }
             default -> throw new UnsupportedSynopsisException(synopsisID);
         };
+        synopsis.algorithmType = synopsisID;
+        return synopsis;
     }
 }
