@@ -33,11 +33,11 @@ public class Bloomfilter extends Synopsis {
 
     /**
      * @param uid        unique synopsis instance ID
-     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode,
+     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode (ignored),
      *                   [3]=expectedInsertions (int), [4]=falsePositiveRate (double)
      */
     public Bloomfilter(int uid, String[] parameters) {
-        super(uid, parameters[0], parameters[1], parameters[2]);
+        super(uid, parameters[0], parameters[1]);
         this.expectedInsertions = Integer.parseInt(parameters[3]);
         this.falsePositiveRate = Double.parseDouble(parameters[4]);
         this.bloomFilter = new BloomFilter(expectedInsertions, falsePositiveRate);

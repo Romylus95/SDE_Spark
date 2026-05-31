@@ -1,26 +1,19 @@
 package infore.sde.spark.routing;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * State for the DataRouter. Tracks which parallelism levels are registered
- * and what routing keys exist per stream.
+ * State for the DataRouter. Tracks synopsis registrations keyed by uid.
  */
 public class RoutingState implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** streamID -> list of routing keys for that stream */
-    private final Map<String, List<String>> keysPerStream = new HashMap<>();
-
-    /** uid -> original request (for cleanup on DELETE) */
+    /** uid -> registration (noOfP, requestID, dataSetKey) */
     private final Map<Integer, RoutingRegistration> registrations = new HashMap<>();
 
-    public Map<String, List<String>> getKeysPerStream() { return keysPerStream; }
     public Map<Integer, RoutingRegistration> getRegistrations() { return registrations; }
 
     public static class RoutingRegistration implements Serializable {

@@ -15,8 +15,8 @@ public class SimpleSumFunction extends ReduceFunction {
 
     private final List<Object> estimations = new ArrayList<>();
 
-    public SimpleSumFunction(int noOfP, int count, String[] parameters, int synopsisID, int requestID) {
-        super(noOfP, count, parameters, synopsisID, requestID);
+    public SimpleSumFunction(int noOfP, int count, int synopsisID, int requestID) {
+        super(noOfP, count, synopsisID, requestID);
     }
 
     @Override

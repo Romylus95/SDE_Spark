@@ -22,11 +22,11 @@ public class CountMin extends Synopsis {
 
     /**
      * @param uid        unique synopsis instance ID
-     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode,
+     * @param parameters [0]=keyField, [1]=valueField, [2]=operationMode (ignored),
      *                   [3]=epsilon (double), [4]=delta (double), [5]=seed (int)
      */
     public CountMin(int uid, String[] parameters) {
-        super(uid, parameters[0], parameters[1], parameters[2]);
+        super(uid, parameters[0], parameters[1]);
         this.cm = new CM(
                 Double.parseDouble(parameters[3]),
                 Double.parseDouble(parameters[4]),
