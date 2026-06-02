@@ -29,3 +29,16 @@ results/
 # Misc
 2026-02-10-hello.txt
 web-bundles/
+
+# Local scripts and presentation files
+run-pipeline.cmd
+run-producer.cmd
+run-producer-streams.cmd
+run-experiment-A.sh
+SDE_Spark_Architecture.pptx
+generate_pptx.py
+add_aggregation_slides.py
+
+# Runtime artifacts
+bash.exe.stackdump
+checkpoints/
