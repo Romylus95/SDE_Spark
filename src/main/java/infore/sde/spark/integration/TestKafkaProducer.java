@@ -39,14 +39,12 @@ public class TestKafkaProducer {
             LOG.info("=== Sending test messages to {} ===", brokers);
 
             // ── Step 1: Send ADD request (noOfP=1, single partition) ──
-            String addSingle = """
-                    {"dataSetkey":"Forex","requestID":1,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":["StockID","price","Queryable","0.01","0.99","42"],"noOfP":1}""";
+            String addSingle = "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"0.01\",\"0.99\",\"42\"],\"noOfP\":1}";
             send(producer, requestTopic, "Forex", addSingle);
             LOG.info("Sent ADD request uid=10 noOfP=1 (single partition)");
 
             // ── Step 2: Send ADD request (noOfP=3, triggers fan-out) ──
-            String addMulti = """
-                    {"dataSetkey":"Forex","requestID":1,"synopsisID":4,"uid":42,"streamID":"EURUSD","param":["StockID","price","Queryable","0.05"],"noOfP":3}""";
+            String addMulti = "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":4,\"uid\":42,\"streamID\":\"EURUSD\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"0.05\"],\"noOfP\":3}";
             send(producer, requestTopic, "Forex", addMulti);
             LOG.info("Sent ADD request uid=42 noOfP=3 (should fan-out to 3 copies)");
 
@@ -64,14 +62,12 @@ public class TestKafkaProducer {
             }
 
             // ── Step 4: Send ESTIMATE request ──
-            String estimate = """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":["AAPL"],"noOfP":1}""";
+            String estimate = "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[\"AAPL\"],\"noOfP\":1}";
             send(producer, requestTopic, "Forex", estimate);
             LOG.info("Sent ESTIMATE request uid=10");
 
             // ── Step 5: Send DELETE request ──
-            String delete = """
-                    {"dataSetkey":"Forex","requestID":2,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":[],"noOfP":1}""";
+            String delete = "{\"dataSetkey\":\"Forex\",\"requestID\":2,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[],\"noOfP\":1}";
             send(producer, requestTopic, "Forex", delete);
             LOG.info("Sent DELETE request uid=10");
 

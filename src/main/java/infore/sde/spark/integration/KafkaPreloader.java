@@ -175,7 +175,7 @@ public class KafkaPreloader {
             for (int pass = 1; pass <= multiplier; pass++) {
                 for (String json : base) {
                     producer.send(
-                        new ProducerRecord<>(dataTopic, datasetKey, json),
+                        new ProducerRecord<>(dataTopic, null, json),
                         (metadata, exception) -> {
                             if (exception != null) {
                                 errorCount.incrementAndGet();

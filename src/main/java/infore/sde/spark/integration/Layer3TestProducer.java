@@ -54,8 +54,7 @@ public class Layer3TestProducer {
             //   params: [keyField, valueField, operationMode, epsilon, delta, seed]
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":1,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":["StockID","price","Queryable","0.01","0.99","42"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"0.01\",\"0.99\",\"42\"],\"noOfP\":1}");
             LOG.info("STEP 1: ADD CountMin uid=10 synID=1");
             producer.flush();
             Thread.sleep(3000);  // Wait for Spark to process the ADD
@@ -87,8 +86,7 @@ public class Layer3TestProducer {
             //   Expected: ~3 (AAPL appeared 3 times)
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":["AAPL"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[\"AAPL\"],\"noOfP\":1}");
             LOG.info("STEP 3: ESTIMATE CountMin uid=10 query='AAPL' (expect ~3)");
             producer.flush();
             Thread.sleep(3000);
@@ -98,8 +96,7 @@ public class Layer3TestProducer {
             //   params: [keyField, valueField, operationMode, expectedInsertions, falsePositiveRate]
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":1,"synopsisID":2,"uid":20,"streamID":"EURUSD","param":["StockID","price","Queryable","1000","0.01"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":2,\"uid\":20,\"streamID\":\"EURUSD\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"1000\",\"0.01\"],\"noOfP\":1}");
             LOG.info("STEP 4: ADD BloomFilter uid=20 synID=2");
             producer.flush();
             Thread.sleep(3000);
@@ -129,8 +126,7 @@ public class Layer3TestProducer {
             //   Expected: true (AAPL was added)
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":2,"uid":20,"streamID":"EURUSD","param":["AAPL"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":2,\"uid\":20,\"streamID\":\"EURUSD\",\"param\":[\"AAPL\"],\"noOfP\":1}");
             LOG.info("STEP 6: ESTIMATE BloomFilter uid=20 query='AAPL' (expect true)");
             producer.flush();
             Thread.sleep(3000);
@@ -140,8 +136,7 @@ public class Layer3TestProducer {
             //   params: [keyField, valueField, operationMode, relativeStdDev]
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":1,"synopsisID":4,"uid":30,"streamID":"EURUSD","param":["StockID","price","Queryable","0.05"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":4,\"uid\":30,\"streamID\":\"EURUSD\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"0.05\"],\"noOfP\":1}");
             LOG.info("STEP 7: ADD HyperLogLog uid=30 synID=4");
             producer.flush();
             Thread.sleep(3000);
@@ -175,8 +170,7 @@ public class Layer3TestProducer {
             //   Note: HLL uses valueIndex (price), so it counts unique prices
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":4,"uid":30,"streamID":"EURUSD","param":["cardinality"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":4,\"uid\":30,\"streamID\":\"EURUSD\",\"param\":[\"cardinality\"],\"noOfP\":1}");
             LOG.info("STEP 9: ESTIMATE HyperLogLog uid=30 (expect ~5 unique prices)");
             producer.flush();
             Thread.sleep(3000);
@@ -185,8 +179,7 @@ public class Layer3TestProducer {
             // STEP 10: DELETE the CountMin synopsis
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":2,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":[],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":2,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[],\"noOfP\":1}");
             LOG.info("STEP 10: DELETE CountMin uid=10");
             producer.flush();
             Thread.sleep(3000);
@@ -195,8 +188,7 @@ public class Layer3TestProducer {
             // STEP 11: ESTIMATE on deleted CountMin — should produce no output
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":1,"uid":10,"streamID":"EURUSD","param":["AAPL"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":1,\"uid\":10,\"streamID\":\"EURUSD\",\"param\":[\"AAPL\"],\"noOfP\":1}");
             LOG.info("STEP 11: ESTIMATE on deleted CountMin uid=10 (expect NO output)");
             producer.flush();
             Thread.sleep(3000);
@@ -207,17 +199,16 @@ public class Layer3TestProducer {
             //   Expected: true
             // ────────────────────────────────────────────────────────────────
             send(producer, requestTopic, "Forex",
-                    """
-                    {"dataSetkey":"Forex","requestID":3,"synopsisID":2,"uid":20,"streamID":"EURUSD","param":["NVDA"],"noOfP":1}""");
+                    "{\"dataSetkey\":\"Forex\",\"requestID\":3,\"synopsisID\":2,\"uid\":20,\"streamID\":\"EURUSD\",\"param\":[\"NVDA\"],\"noOfP\":1}");
             LOG.info("STEP 12: ESTIMATE BloomFilter uid=20 query='NVDA' (expect true)");
             producer.flush();
             Thread.sleep(2000);
 
             LOG.info("=== All Layer 3 test messages sent. ===");
             LOG.info("Expected results:");
-            LOG.info("  STEP 3:  CountMin AAPL count ≈ 549 (sum of prices: 182.50+183.00+184.00)");
+            LOG.info("  STEP 3:  CountMin AAPL count ~ 549 (sum of prices: 182.50+183.00+184.00)");
             LOG.info("  STEP 6:  BloomFilter AAPL membership = true");
-            LOG.info("  STEP 9:  HyperLogLog cardinality ≈ 5 unique prices");
+            LOG.info("  STEP 9:  HyperLogLog cardinality ~ 5 unique prices");
             LOG.info("  STEP 11: No estimation (CountMin was deleted)");
             LOG.info("  STEP 12: BloomFilter NVDA membership = true");
         }
@@ -225,6 +216,6 @@ public class Layer3TestProducer {
 
     private static void send(KafkaProducer<String, String> producer,
                              String topic, String key, String value) {
-        producer.send(new ProducerRecord<>(topic, key, value.strip()));
+        producer.send(new ProducerRecord<>(topic, key, value.trim()));
     }
 }

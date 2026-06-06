@@ -19,13 +19,7 @@ class MessageSerializationTest {
 
     @Test
     void datapointDeserializesFromKafkaFormat() throws Exception {
-        String json = """
-                {
-                  "dataSetkey": "Forex",
-                  "streamID": "EURUSD",
-                  "values": { "StockID": "AAPL", "price": "182.50" }
-                }
-                """;
+        String json = "{\"dataSetkey\":\"Forex\",\"streamID\":\"EURUSD\",\"values\":{\"StockID\":\"AAPL\",\"price\":\"182.50\"}}";
 
         Datapoint dp = MAPPER.readValue(json, Datapoint.class);
 
@@ -36,17 +30,7 @@ class MessageSerializationTest {
 
     @Test
     void requestDeserializesFromKafkaFormat() throws Exception {
-        String json = """
-                {
-                  "dataSetkey": "Forex",
-                  "requestID": 1,
-                  "synopsisID": 1,
-                  "uid": 42,
-                  "streamID": "INTEL",
-                  "param": ["StockID", "price", "Queryable", "0.01", "4"],
-                  "noOfP": 4
-                }
-                """;
+        String json = "{\"dataSetkey\":\"Forex\",\"requestID\":1,\"synopsisID\":1,\"uid\":42,\"streamID\":\"INTEL\",\"param\":[\"StockID\",\"price\",\"Queryable\",\"0.01\",\"4\"],\"noOfP\":4}";
 
         Request rq = MAPPER.readValue(json, Request.class);
 
@@ -75,14 +59,11 @@ class MessageSerializationTest {
 
     @Test
     void datapointRoundTrip() throws Exception {
-        String original = """
-                {"dataSetkey":"Forex","streamID":"EURUSD","values":{"StockID":"AAPL","price":"182.50"}}
-                """;
+        String original = "{\"dataSetkey\":\"Forex\",\"streamID\":\"EURUSD\",\"values\":{\"StockID\":\"AAPL\",\"price\":\"182.50\"}}";
 
         Datapoint dp = MAPPER.readValue(original, Datapoint.class);
         String reserialized = MAPPER.writeValueAsString(dp);
 
-        // Re-parse to compare field values (order may differ)
         Datapoint reparsed = MAPPER.readValue(reserialized, Datapoint.class);
         assertEquals(dp.getDataSetKey(), reparsed.getDataSetKey());
         assertEquals(dp.getStreamID(), reparsed.getStreamID());
