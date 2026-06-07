@@ -34,14 +34,28 @@ public class KafkaIngestionLayer {
         this.config = config;
     }
 
+    // Builds the JSON assign spec for direct partition assignment, bypassing consumer group protocol.
+    // Format: {"topicName":[0,1,2,...,n-1]}
+    private static String buildAssignSpec(String topic, int numPartitions) {
+        StringBuilder sb = new StringBuilder("{\"").append(topic).append("\":[");
+        for (int i = 0; i < numPartitions; i++) {
+            if (i > 0) sb.append(",");
+            sb.append(i);
+        }
+        sb.append("]}");
+        return sb.toString();
+    }
+
     public Dataset<Datapoint> readDataStream() {
         DataStreamReader reader = spark.readStream()
                 .format("kafka")
                 .option("kafka.bootstrap.servers", config.getKafkaBrokers())
-                .option("subscribe", config.getDataTopic())
+                .option("assign", buildAssignSpec(config.getDataTopic(), config.getKafkaPartitions()))
                 .option("startingOffsets", config.getStartingOffsets())
-                .option("kafka.group.id", config.getKafkaGroupId() + "-data")
                 .option("failOnDataLoss", String.valueOf(config.isFailOnDataLoss()));
+        if (config.getMaxOffsetsPerTrigger() > 0) {
+            reader = reader.option("maxOffsetsPerTrigger", config.getMaxOffsetsPerTrigger());
+        }
         config.getKafkaSecurityOptions().forEach(reader::option);
         Dataset<Row> raw = reader.load()
                 .selectExpr("CAST(value AS STRING) as json");
@@ -62,9 +76,8 @@ public class KafkaIngestionLayer {
         DataStreamReader reader = spark.readStream()
                 .format("kafka")
                 .option("kafka.bootstrap.servers", config.getKafkaBrokers())
-                .option("subscribe", config.getRequestTopic())
+                .option("assign", buildAssignSpec(config.getRequestTopic(), config.getKafkaPartitions()))
                 .option("startingOffsets", config.getStartingOffsets())
-                .option("kafka.group.id", config.getKafkaGroupId() + "-request")
                 .option("failOnDataLoss", String.valueOf(config.isFailOnDataLoss()));
         config.getKafkaSecurityOptions().forEach(reader::option);
         Dataset<Row> raw = reader.load()

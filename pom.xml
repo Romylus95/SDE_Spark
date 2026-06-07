@@ -49,7 +49,8 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql-kafka-0-10_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <!-- Not provided by HDP 3.1.0 Spark installation — must be bundled -->
+            <scope>compile</scope>
         </dependency>
 
         <!-- Jackson JSON -->

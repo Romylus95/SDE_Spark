@@ -20,7 +20,15 @@ Thumbs.db
 *.log.tmp
 
 # Local-only folders (not public)
-docs/
+docs/**/*.pdf
+docs/**/*.pptx
+docs/**/*.py
+docs/**/*.docx
+docs/**/*.html
+docs/**/*.png
+docs/**/*.svg
+docs/**/*.mmd
+docs/**/*.puml
 results/
 
 # Office temp files

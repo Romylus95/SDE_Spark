@@ -28,6 +28,8 @@ public class SDEConfig implements Serializable {
     private Duration routingStateTtl = Duration.ofDays(1);
     private Duration aggregationTimeout = Duration.ofMinutes(5);
     private boolean failOnDataLoss = false;
+    private long maxOffsetsPerTrigger = -1; // -1 = no limit (read all available)
+    private int kafkaPartitions = 4;
     private String kafkaProducerAcks = "all";
     private String kafkaProducerCompression = "lz4";
     private boolean kafkaProducerIdempotence = true;
@@ -95,6 +97,12 @@ public class SDEConfig implements Serializable {
                     break;
                 case "--fail-on-data-loss":
                     config.failOnDataLoss = Boolean.parseBoolean(args[++i]);
+                    break;
+                case "--max-offsets-per-trigger":
+                    config.maxOffsetsPerTrigger = Long.parseLong(args[++i]);
+                    break;
+                case "--kafka-partitions":
+                    config.kafkaPartitions = Integer.parseInt(args[++i]);
                     break;
                 case "--kafka-producer-acks":
                     config.kafkaProducerAcks = args[++i];
@@ -168,6 +176,8 @@ public class SDEConfig implements Serializable {
     public Duration getRoutingStateTtl() { return routingStateTtl; }
     public Duration getAggregationTimeout() { return aggregationTimeout; }
     public boolean isFailOnDataLoss() { return failOnDataLoss; }
+    public long getMaxOffsetsPerTrigger() { return maxOffsetsPerTrigger; }
+    public int getKafkaPartitions() { return kafkaPartitions; }
     public String getKafkaProducerAcks() { return kafkaProducerAcks; }
     public String getKafkaProducerCompression() { return kafkaProducerCompression; }
     public boolean isKafkaProducerIdempotence() { return kafkaProducerIdempotence; }

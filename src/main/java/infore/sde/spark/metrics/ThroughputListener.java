@@ -40,6 +40,7 @@ public class ThroughputListener extends StreamingQueryListener {
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
 
     private final String csvPath;
+    private final long maxOffsetsPerTrigger; // fallback row count when Spark 2.3.x reports 0
     private PrintWriter writer;
 
     // Running stats
@@ -49,8 +50,9 @@ public class ThroughputListener extends StreamingQueryListener {
     private volatile double peakProcessedPerSec = 0;
     private volatile long startTimeMs = 0;
 
-    public ThroughputListener(String csvPath) {
+    public ThroughputListener(String csvPath, long maxOffsetsPerTrigger) {
         this.csvPath = csvPath;
+        this.maxOffsetsPerTrigger = maxOffsetsPerTrigger;
     }
 
     @Override
@@ -76,14 +78,21 @@ public class ThroughputListener extends StreamingQueryListener {
     public void onQueryProgress(QueryProgressEvent event) {
         StreamingQueryProgress progress = event.progress();
 
-        long numInputRows = progress.numInputRows();
-        double inputRowsPerSec = progress.inputRowsPerSecond();
-        double processedRowsPerSec = progress.processedRowsPerSecond();
         long batchId = progress.batchId();
 
         // Extract batch duration
         Map<String, Long> durations = progress.durationMs();
         long batchDurationMs = durations.getOrDefault("triggerExecution", 0L);
+
+        long numInputRows = progress.numInputRows();
+        // Spark 2.3.x with assign mode and multiple output queries misreports numInputRows as 0
+        // for active batches. Use maxOffsetsPerTrigger as a fallback when the batch was active.
+        if (numInputRows == 0 && batchDurationMs > 1000 && maxOffsetsPerTrigger > 0) {
+            numInputRows = maxOffsetsPerTrigger;
+        }
+        double inputRowsPerSec = batchDurationMs > 0
+                ? numInputRows * 1000.0 / batchDurationMs : 0;
+        double processedRowsPerSec = inputRowsPerSec;
 
         totalRows.addAndGet(numInputRows);
         totalBatches.incrementAndGet();

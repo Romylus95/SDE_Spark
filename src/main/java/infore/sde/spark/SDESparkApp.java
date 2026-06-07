@@ -55,7 +55,7 @@ public class SDESparkApp {
 
         // Metrics listener — writes per-batch throughput to CSV
         String metricsPath = System.getProperty("sde.metrics.path", "results/throughput.csv");
-        ThroughputListener throughputListener = new ThroughputListener(metricsPath);
+        ThroughputListener throughputListener = new ThroughputListener(metricsPath, config.getMaxOffsetsPerTrigger());
         spark.streams().addListener(throughputListener);
 
         LOG.info("SDE_Spark starting with config: dataTopic={}, requestTopic={}, outputTopic={}, brokers={}",
