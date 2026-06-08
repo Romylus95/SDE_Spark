@@ -17,6 +17,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <spark.version>2.3.2</spark.version>
+        <scala.version>2.11.12</scala.version>
         <scala.binary.version>2.11</scala.binary.version>
         <jackson.version>2.15.3</jackson.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -32,6 +33,14 @@
     </repositories>
 
     <dependencies>
+        <!-- Scala runtime — provided by HDP Spark, needed at compile time for our patched Scala source -->
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Apache Spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -119,6 +128,23 @@
 
     <build>
         <plugins>
+            <!-- Compiles src/main/scala alongside Java sources -->
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>4.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scalaVersion>${scala.version}</scalaVersion>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -152,6 +178,14 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                                <!-- Exclude original KafkaOffsetReader from the kafka jar so our
+                                     patched version (which avoids poll(0) → coordinator hang) wins -->
+                                <filter>
+                                    <artifact>org.apache.spark:spark-sql-kafka-0-10_2.11</artifact>
+                                    <excludes>
+                                        <exclude>org/apache/spark/sql/kafka010/KafkaOffsetReader*.class</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
