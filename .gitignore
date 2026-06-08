@@ -30,6 +30,7 @@ docs/**/*.svg
 docs/**/*.mmd
 docs/**/*.puml
 docs/**/*.md
+CLAUDE.md
 results/
 
 # Office temp files
