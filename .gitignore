@@ -29,6 +29,7 @@ docs/**/*.png
 docs/**/*.svg
 docs/**/*.mmd
 docs/**/*.puml
+docs/**/*.md
 results/
 
 # Office temp files
