@@ -1,8 +1,5 @@
 package infore.sde.spark;
 
-import infore.sde.spark.aggregation.AggregationState;
-import infore.sde.spark.aggregation.PathSplitter;
-import infore.sde.spark.aggregation.ReduceAggregator;
 import infore.sde.spark.config.SDEConfig;
 import infore.sde.spark.ingestion.KafkaIngestionLayer;
 import infore.sde.spark.messages.Datapoint;
@@ -11,12 +8,10 @@ import infore.sde.spark.messages.Request;
 import infore.sde.spark.metrics.PipelineMetrics;
 import infore.sde.spark.metrics.ThroughputListener;
 import infore.sde.spark.output.KafkaOutputLayer;
+import infore.sde.spark.processing.CombinedProcessor;
+import infore.sde.spark.processing.CombinedState;
 import infore.sde.spark.processing.InputEvent;
-import infore.sde.spark.processing.SynopsisProcessor;
-import infore.sde.spark.processing.SynopsisProcessorState;
-import infore.sde.spark.routing.DataRouter;
 
-import infore.sde.spark.routing.RoutingState;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import java.util.ArrayList;
@@ -34,13 +29,11 @@ import org.slf4j.LoggerFactory;
 /**
  * SDE_Spark — Synopsis Data Engine, Spark Edition.
  *
- * Main entry point. Wires together the 6-layer pipeline:
- *   Layer 1: KafkaIngestionLayer   — read raw JSON from Kafka
- *   Layer 2: RequestRouter + union — fan-out requests, merge streams
- *   Layer 3: SynopsisProcessor     — core synopsis lifecycle (in-memory state)
- *   Layer 4: PathSplitter          — green/purple path routing
- *   Layer 5: ReduceAggregator      — merge partial results (purple path)
- *   Layer 6: KafkaOutputLayer      — write estimations to Kafka
+ * Main entry point. Wires together the optimized pipeline:
+ *   Layer 1:   KafkaIngestionLayer  — read raw JSON from Kafka
+ *   Layers 2+3: CombinedProcessor  — routing + synopsis lifecycle + inline PURPLE reduction
+ *                                    (single flatMapGroupsWithState keyed by base dataSetKey)
+ *   Layer 6:   KafkaOutputLayer    — write estimations to Kafka
  */
 public class SDESparkApp {
 
@@ -85,10 +78,11 @@ public class SDESparkApp {
                     Encoders.kryo(Datapoint.class));
         }
 
-        // ──── Layer 2: Routing ────
-        // Union ORIGINAL (un-routed) requests with data.
-        // DataRouter handles BOTH request fan-out and data fan-out in one stateful operator,
-        // so the routing registration and data routing share the same partition state.
+        // ──── Layers 2+3: Combined routing + synopsis lifecycle ────
+        // Union data and requests into a single tagged stream, then process
+        // both in one stateful operator keyed by base dataSetKey.
+        // GREEN and PURPLE estimation results are emitted directly — no downstream
+        // shuffle, fan-out, or ReduceAggregator step needed.
         Dataset<InputEvent> taggedData = dataStream.map(
                 (MapFunction<Datapoint, InputEvent>) InputEvent::data,
                 Encoders.kryo(InputEvent.class));
@@ -97,48 +91,16 @@ public class SDESparkApp {
                 Encoders.kryo(InputEvent.class));
         Dataset<InputEvent> combined = taggedData.union(taggedRequests);
 
-        // ──── Layer 2b: Data + Request Routing (fan-out to keyed partitions) ────
-        KeyValueGroupedDataset<String, InputEvent> groupedForRouting = combined.groupByKey(
+        KeyValueGroupedDataset<String, InputEvent> groupedByBaseKey = combined.groupByKey(
                 (MapFunction<InputEvent, String>) InputEvent::getDataSetKey,
                 Encoders.STRING());
 
-        Dataset<InputEvent> routed = groupedForRouting.flatMapGroupsWithState(
-                new DataRouter(config),
+        Dataset<Estimation> allEstimations = groupedByBaseKey.flatMapGroupsWithState(
+                new CombinedProcessor(config, metrics),
                 OutputMode.Append(),
-                Encoders.kryo(RoutingState.class),
-                Encoders.kryo(InputEvent.class),
-                GroupStateTimeout.ProcessingTimeTimeout());
-
-        // ──── Layer 3: Synopsis Processing ────
-        KeyValueGroupedDataset<String, InputEvent> groupedByKey = routed.groupByKey(
-                (MapFunction<InputEvent, String>) InputEvent::getDataSetKey,
-                Encoders.STRING());
-
-        Dataset<Estimation> estimations = groupedByKey.flatMapGroupsWithState(
-                new SynopsisProcessor(config, metrics),
-                OutputMode.Append(),
-                Encoders.kryo(SynopsisProcessorState.class),
+                Encoders.kryo(CombinedState.class),
                 Encoders.kryo(Estimation.class),
                 GroupStateTimeout.ProcessingTimeTimeout());
-
-        // ──── Layer 4: Path Splitting ────
-        PathSplitter splitter = new PathSplitter(estimations);
-
-        // ──── Layer 5: Aggregation (Purple path only) ────
-        KeyValueGroupedDataset<Integer, Estimation> groupedByUid = splitter.getPurplePath()
-                .groupByKey(
-                        (MapFunction<Estimation, Integer>) Estimation::getUid,
-                        Encoders.INT());
-
-        Dataset<Estimation> aggregated = groupedByUid.flatMapGroupsWithState(
-                new ReduceAggregator(config),
-                OutputMode.Append(),
-                Encoders.kryo(AggregationState.class),
-                Encoders.kryo(Estimation.class),
-                GroupStateTimeout.ProcessingTimeTimeout());
-
-        // Merge green + purple outputs
-        Dataset<Estimation> allEstimations = splitter.getGreenPath().union(aggregated);
 
         // ──── Layer 6: Output ────
         KafkaOutputLayer outputLayer = new KafkaOutputLayer(config);
