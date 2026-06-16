@@ -17,7 +17,10 @@ import infore.sde.spark.processing.SynopsisProcessorState;
 import infore.sde.spark.routing.DataRouter;
 
 import infore.sde.spark.routing.RoutingState;
+import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.MapFunction;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.KeyValueGroupedDataset;
@@ -55,7 +58,7 @@ public class SDESparkApp {
 
         // Metrics listener — writes per-batch throughput to CSV
         String metricsPath = System.getProperty("sde.metrics.path", "results/throughput.csv");
-        ThroughputListener throughputListener = new ThroughputListener(metricsPath, config.getMaxOffsetsPerTrigger());
+        ThroughputListener throughputListener = new ThroughputListener(metricsPath, config.getMaxOffsetsPerTrigger(), config.getIngestionMultiplier());
         spark.streams().addListener(throughputListener);
 
         LOG.info("SDE_Spark starting with config: dataTopic={}, requestTopic={}, outputTopic={}, brokers={}",
@@ -66,6 +69,21 @@ public class SDESparkApp {
         KafkaIngestionLayer ingestion = new KafkaIngestionLayer(spark, config);
         Dataset<Datapoint> dataStream = ingestion.readDataStream();
         Dataset<Request> requestStream = ingestion.readRequestStream();
+
+        // In-memory ingestion multiplier (Kontaxakis approach): each Datapoint read from Kafka
+        // is duplicated N times in memory before reaching the routing layer. This makes workers
+        // compute-bound without changing Kafka throughput or state size, enabling genuine
+        // worker scaling experiments. Applied to data only — requests must never be multiplied.
+        if (config.getIngestionMultiplier() > 1) {
+            final int mult = config.getIngestionMultiplier();
+            dataStream = dataStream.flatMap(
+                    (FlatMapFunction<Datapoint, Datapoint>) dp -> {
+                        List<Datapoint> copies = new ArrayList<>(mult);
+                        for (int i = 0; i < mult; i++) copies.add(dp);
+                        return copies.iterator();
+                    },
+                    Encoders.kryo(Datapoint.class));
+        }
 
         // ──── Layer 2: Routing ────
         // Union ORIGINAL (un-routed) requests with data.

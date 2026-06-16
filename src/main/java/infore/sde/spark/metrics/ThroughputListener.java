@@ -41,6 +41,7 @@ public class ThroughputListener extends StreamingQueryListener {
 
     private final String csvPath;
     private final long maxOffsetsPerTrigger; // fallback row count when Spark 2.3.x reports 0
+    private final int ingestionMultiplier;   // in-pipeline tuple duplication factor
     private PrintWriter writer;
 
     // Running stats
@@ -50,9 +51,10 @@ public class ThroughputListener extends StreamingQueryListener {
     private volatile double peakProcessedPerSec = 0;
     private volatile long startTimeMs = 0;
 
-    public ThroughputListener(String csvPath, long maxOffsetsPerTrigger) {
+    public ThroughputListener(String csvPath, long maxOffsetsPerTrigger, int ingestionMultiplier) {
         this.csvPath = csvPath;
         this.maxOffsetsPerTrigger = maxOffsetsPerTrigger;
+        this.ingestionMultiplier = ingestionMultiplier;
     }
 
     @Override
@@ -92,7 +94,9 @@ public class ThroughputListener extends StreamingQueryListener {
         }
         double inputRowsPerSec = batchDurationMs > 0
                 ? numInputRows * 1000.0 / batchDurationMs : 0;
-        double processedRowsPerSec = inputRowsPerSec;
+        // Effective throughput accounts for in-pipeline tuple multiplication.
+        // With ingestionMultiplier=1 (default) this equals inputRowsPerSec.
+        double processedRowsPerSec = inputRowsPerSec * ingestionMultiplier;
 
         totalRows.addAndGet(numInputRows);
         totalBatches.incrementAndGet();

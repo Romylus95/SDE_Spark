@@ -25,11 +25,11 @@ public class KafkaPreloader {
         "IBM",  "GE",   "MMM",  "CAT",  "BA",   "RTX",  "HON",  "UPS",  "FDX",  "SBUX"
     };
 
-    private String brokers      = "localhost:9092";
-    private String dataTopic    = "data_topic";
-    private String requestTopic = "request_topic";
-    private String datasetKey   = "Forex";
-    private int    numStreams    = 50;
+    private String   brokers      = "localhost:9092";
+    private String   dataTopic    = "data_topic";
+    private String   requestTopic = "request_topic";
+    private String[] datasetKeys  = {"Forex"};
+    private int      numStreams    = 50;
     private int    numSynopses  = 1;
     private int    noop         = 1;
     private int    baseMessages = 50000;
@@ -47,7 +47,7 @@ public class KafkaPreloader {
         LOG.info("  Brokers:        {}", brokers);
         LOG.info("  Data topic:     {}", dataTopic);
         LOG.info("  Request topic:  {}", requestTopic);
-        LOG.info("  Dataset key:    {}", datasetKey);
+        LOG.info("  Dataset keys:   {}", Arrays.toString(datasetKeys));
         LOG.info("  Num streams:    {}", numStreams);
         LOG.info("  Synopsis types: {}", Arrays.toString(synopsisTypes));
         LOG.info("  noOfP:          {}", noop);
@@ -73,7 +73,10 @@ public class KafkaPreloader {
                     requestTopic = args[++i];
                     break;
                 case "--dataset-key":
-                    datasetKey = args[++i];
+                    datasetKeys = new String[]{args[++i]};
+                    break;
+                case "--dataset-keys":
+                    datasetKeys = args[++i].split(",");
                     break;
                 case "--num-streams":
                     numStreams = Integer.parseInt(args[++i]);
@@ -116,13 +119,15 @@ public class KafkaPreloader {
         int registered = 0;
 
         try {
-            for (int type : synopsisTypes) {
-                String[] params = getSynopsisParams(type);
-                for (int i = 1; i <= numSynopses; i++) {
-                    String json = buildAddRequestJson(i, type, params);
-                    producer.send(new ProducerRecord<>(requestTopic, datasetKey, json)).get();
-                    LOG.info("Registered synopsis uid={} type={} noOfP={}", i, type, noop);
-                    registered++;
+            for (String key : datasetKeys) {
+                for (int type : synopsisTypes) {
+                    String[] params = getSynopsisParams(type);
+                    for (int i = 1; i <= numSynopses; i++) {
+                        String json = buildAddRequestJson(key, i, type, params);
+                        producer.send(new ProducerRecord<>(requestTopic, key, json)).get();
+                        LOG.info("Registered key={} synopsis uid={} type={} noOfP={}", key, i, type, noop);
+                        registered++;
+                    }
                 }
             }
         } finally {
@@ -139,10 +144,11 @@ public class KafkaPreloader {
         Random rng = new Random(42);
 
         for (int i = 0; i < baseMessages; i++) {
+            String key      = datasetKeys[i % datasetKeys.length];
             String streamId = "stream_" + (i % numStreams);
             String stockId  = STOCK_SYMBOLS[rng.nextInt(STOCK_SYMBOLS.length)];
             double price    = 1.0 + rng.nextDouble() * 499.0;
-            base.add(buildDatapointJson(streamId, stockId, price));
+            base.add(buildDatapointJson(key, streamId, stockId, price));
         }
 
         LOG.info("Phase 2 complete: {} messages pre-serialized (~{} MB).",
@@ -207,7 +213,7 @@ public class KafkaPreloader {
         double rate  = totalMs > 0 ? total * 1000.0 / totalMs : 0;
 
         LOG.info("=== KafkaPreloader complete ===");
-        LOG.info("  Synopses registered:  {}", synopsisTypes.length * numSynopses);
+        LOG.info("  Synopses registered:  {}", synopsisTypes.length * numSynopses * datasetKeys.length);  // correct: one per key
         LOG.info("  Base dataset size:    {}", baseMessages);
         LOG.info("  Multiplier:           {}", multiplier);
         LOG.info("  Total messages:       {}", total);
@@ -221,13 +227,13 @@ public class KafkaPreloader {
         LOG.info("  --starting-offsets earliest");
     }
 
-    private String buildDatapointJson(String streamId, String stockId, double price) {
+    private String buildDatapointJson(String key, String streamId, String stockId, double price) {
         return String.format(Locale.US,
                 "{\"dataSetkey\":\"%s\",\"streamID\":\"%s\",\"values\":{\"StockID\":\"%s\",\"price\":\"%.2f\"}}",
-                datasetKey, streamId, stockId, price);
+                key, streamId, stockId, price);
     }
 
-    private String buildAddRequestJson(int uid, int synopsisId, String[] params) {
+    private String buildAddRequestJson(String key, int uid, int synopsisId, String[] params) {
         StringBuilder paramArray = new StringBuilder("[");
         for (int i = 0; i < params.length; i++) {
             if (i > 0) paramArray.append(",");
@@ -238,7 +244,7 @@ public class KafkaPreloader {
         return String.format(Locale.US,
                 "{\"dataSetkey\":\"%s\",\"requestID\":1,\"synopsisID\":%d,\"uid\":%d," +
                 "\"streamID\":\"ALL\",\"param\":%s,\"noOfP\":%d}",
-                datasetKey, synopsisId, uid, paramArray.toString(), noop);
+                key, synopsisId, uid, paramArray.toString(), noop);
     }
 
     private String[] getSynopsisParams(int synopsisId) {
