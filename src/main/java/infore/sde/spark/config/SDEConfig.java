@@ -34,6 +34,7 @@ public class SDEConfig implements Serializable {
     private String kafkaProducerCompression = "lz4";
     private boolean kafkaProducerIdempotence = true;
     private int ingestionMultiplier = 1;
+    private int numSlots = 1;
     private String kafkaSecurityProtocol = "";
     private String kafkaSaslMechanism = "";
     private String kafkaSaslJaasConfig = "";
@@ -117,6 +118,9 @@ public class SDEConfig implements Serializable {
                 case "--ingestion-multiplier":
                     config.ingestionMultiplier = Integer.parseInt(args[++i]);
                     break;
+                case "--num-slots":
+                    config.numSlots = Integer.parseInt(args[++i]);
+                    break;
                 case "--kafka-security-protocol":
                     config.kafkaSecurityProtocol = args[++i];
                     break;
@@ -186,6 +190,7 @@ public class SDEConfig implements Serializable {
     public String getKafkaProducerCompression() { return kafkaProducerCompression; }
     public boolean isKafkaProducerIdempotence() { return kafkaProducerIdempotence; }
     public int getIngestionMultiplier() { return ingestionMultiplier; }
+    public int getNumSlots() { return numSlots; }
     public String getKafkaSecurityProtocol() { return kafkaSecurityProtocol; }
     public String getKafkaSaslMechanism() { return kafkaSaslMechanism; }
     public String getKafkaSaslJaasConfig() { return kafkaSaslJaasConfig; }

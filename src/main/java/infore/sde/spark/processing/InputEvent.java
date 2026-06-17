@@ -27,6 +27,10 @@ public class InputEvent implements Serializable {
     private final Request request;
     private final String dataSetKey;
 
+    // Overrides the groupByKey partition key without changing the underlying message key.
+    // Null means use dataSetKey (original base key) as the routing key.
+    private String routingKey;
+
     private InputEvent(Type type, Datapoint datapoint, Request request, String dataSetKey) {
         this.type = type;
         this.datapoint = datapoint;
@@ -42,10 +46,25 @@ public class InputEvent implements Serializable {
         return new InputEvent(Type.REQUEST, null, rq, rq.getDataSetKey());
     }
 
+    public static InputEvent dataRouted(Datapoint dp, String routingKey) {
+        InputEvent e = new InputEvent(Type.DATA, dp, null, dp.getDataSetKey());
+        e.routingKey = routingKey;
+        return e;
+    }
+
+    public static InputEvent requestRouted(Request rq, String routingKey) {
+        InputEvent e = new InputEvent(Type.REQUEST, null, rq, rq.getDataSetKey());
+        e.routingKey = routingKey;
+        return e;
+    }
+
     public Type getType() { return type; }
     public Datapoint getDatapoint() { return datapoint; }
     public Request getRequest() { return request; }
     public String getDataSetKey() { return dataSetKey; }
+
+    /** Returns the Spark partition key — routing key if set, otherwise the base dataSetKey. */
+    public String getRoutingKey() { return routingKey != null ? routingKey : dataSetKey; }
 
     public boolean isData() { return type == Type.DATA; }
     public boolean isRequest() { return type == Type.REQUEST; }
