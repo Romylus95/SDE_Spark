@@ -11,9 +11,6 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.DataStreamReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Layer 1 — Ingestion & Parsing.
  * Consumes raw JSON from two Kafka topics (data_topic and request_topic)
@@ -23,8 +20,6 @@ import org.slf4j.LoggerFactory;
  * across Spark partitions. Invalid messages are logged and filtered out.
  */
 public class KafkaIngestionLayer {
-
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaIngestionLayer.class);
 
     private final SparkSession spark;
     private final SDEConfig config;
@@ -60,16 +55,38 @@ public class KafkaIngestionLayer {
         Dataset<Row> raw = reader.load()
                 .selectExpr("CAST(value AS STRING) as json");
 
-        return raw.map((MapFunction<Row, Datapoint>) row -> {
+        return raw.map(new DatapointParser(), Encoders.kryo(Datapoint.class))
+                .filter((FilterFunction<Datapoint>) dp -> dp != null && dp.getDataSetKey() != null);
+    }
+
+    private static class DatapointParser implements MapFunction<Row, Datapoint> {
+        private static final long serialVersionUID = 1L;
+        private transient ObjectMapper mapper;
+
+        @Override
+        public Datapoint call(Row row) {
+            if (mapper == null) mapper = new ObjectMapper();
             try {
-                ObjectMapper mapper = new ObjectMapper();
                 return mapper.readValue(row.getString(0), Datapoint.class);
             } catch (Exception e) {
-                LOG.warn("Failed to parse Datapoint: {}", e.getMessage());
                 return null;
             }
-        }, Encoders.kryo(Datapoint.class))
-                .filter((FilterFunction<Datapoint>) dp -> dp != null && dp.getDataSetKey() != null);
+        }
+    }
+
+    private static class RequestParser implements MapFunction<Row, Request> {
+        private static final long serialVersionUID = 1L;
+        private transient ObjectMapper mapper;
+
+        @Override
+        public Request call(Row row) {
+            if (mapper == null) mapper = new ObjectMapper();
+            try {
+                return mapper.readValue(row.getString(0), Request.class);
+            } catch (Exception e) {
+                return null;
+            }
+        }
     }
 
     public Dataset<Request> readRequestStream() {
@@ -83,15 +100,7 @@ public class KafkaIngestionLayer {
         Dataset<Row> raw = reader.load()
                 .selectExpr("CAST(value AS STRING) as json");
 
-        return raw.map((MapFunction<Row, Request>) row -> {
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readValue(row.getString(0), Request.class);
-            } catch (Exception e) {
-                LOG.warn("Failed to parse Request: {}", e.getMessage());
-                return null;
-            }
-        }, Encoders.kryo(Request.class))
+        return raw.map(new RequestParser(), Encoders.kryo(Request.class))
                 .filter((FilterFunction<Request>) rq -> rq != null && rq.getDataSetKey() != null);
     }
 }
